@@ -1,0 +1,4 @@
+mdp sql = 'R@bearison21';
+FLUSH PRIVILEGES;
+
+sed -n '/CREATE TABLE `ports`/,/CREATE TABLE/p' EquipementMonitorDump20250911.sql > ports.sql
