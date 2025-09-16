@@ -158,12 +158,12 @@
 
     // Gestion des événements
     function handleDeviceSelect(device, index) {
-    selectedDevice.value = device;
-    console.log('Appareil sélectionné:', device.name, 'Index:', index);
+        selectedDevice.value = device;
+        console.log('Appareil sélectionné:', device.name, 'Index:', index);
     }
 
     function handleNavigationChange(currentIndex, maxIndex) {
-    console.log('Navigation:', currentIndex, '/', maxIndex);
+        console.log('Navigation:', currentIndex, '/', maxIndex);
     }
 
     onMounted(() => {
