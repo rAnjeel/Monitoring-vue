@@ -1,13 +1,18 @@
 <template>
+    <CardNavbar
+        :device-list="customDevices"
+        :initial-visible-cards="4"
+        @device-selected="handleDeviceSelect"
+        @navigation-changed="handleNavigationChange"
+        ref="deviceNav"
+    />
     <div class="sub-navbar">
         <div class="nav nav-tabs">
             <h4 class="text-uppercase" style="color: #ecf0f1;">Devices List</h4>
         </div>
     </div>
 
-    <!-- Content Area -->
     <div class="content-wrapper">
-        <!-- Filter Section -->
         <div class="filter-section">
             <div class="row">
                 <div class="col-md-2">
@@ -26,7 +31,6 @@
             </div>
         </div>
 
-        <!-- Data Table -->
         <div class="data-table">
             <table class="table table-condensed" style="margin: 0;">
                 <thead class="table-header">
@@ -131,145 +135,39 @@
         </div>
     </div>
 </template>
-
-<style>
-    body {
-        background-color: #f5f5f5;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        margin: 0;
-    }
-
-    .navbar-custom {
-        background-color: #2c3e50;
-        border: none;
-        margin-bottom: 0;
-        border-radius: 0;
-    }
-
-    .navbar-custom .navbar-nav > li > a {
-        color: #ecf0f1;
-        font-size: 13px;
-        padding: 15px 20px;
-    }
-
-    .navbar-custom .navbar-nav > li > a:hover,
-    .navbar-custom .navbar-nav > li.active > a {
-        background-color: #34495e;
-        color: #3498db;
-    }
-
-    .sub-navbar {
-        background-color: #34495e;
-        padding: 10px 0;
-        border-bottom: 1px solid #2c3e50;
-    }
-
-    .sub-navbar .nav-tabs {
-        border-bottom: none;
-        margin-left: 15px;
-    }
-
-    .sub-navbar .nav-tabs > li > a {
-        background: none;
-        border: none;
-        color: #bdc3c7;
-        font-size: 12px;
-        padding: 8px 15px;
-    }
-
-    .sub-navbar .nav-tabs > li.active > a,
-    .sub-navbar .nav-tabs > li > a:hover {
-        background-color: #3498db;
-        color: white;
-        border-radius: 3px;
-    }
-
-    .content-wrapper {
-        padding: 20px;
-        background-color: white;
-        margin: 0;
-    }
-
-    .filter-section {
-        background-color: #ecf0f1;
-        padding: 15px;
-        margin-bottom: 20px;
-        border-radius: 4px;
-    }
-
-    .data-table {
-        background-color: white;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        overflow: hidden;
-    }
-
-    .table-header {
-        background-color: #f1c40f;
-        color: #2c3e50;
-        font-weight: bold;
-        font-size: 12px;
-    }
-
-    .table-header th {
-        padding: 10px 8px;
-        border-right: 1px solid #e67e22;
-        text-align: center;
-    }
-
-    .data-row {
-        border-bottom: 1px solid #ecf0f1;
-        font-size: 11px;
-    }
-
-    .data-row:nth-child(even) {
-        background-color: #f9f9f9;
-    }
-
-    .data-row:hover {
-        background-color: #e8f4fd;
-    }
-
-    .data-row td {
-        padding: 8px;
-        border-right: 1px solid #ecf0f1;
-        vertical-align: middle;
-    }
-
-    .status-indicator {
-        width: 4px;
-        height: 100%;
-        background-color: #27ae60;
-        display: inline-block;
-        margin-right: 8px;
-    }
-
-    .device-cell {
-        position: relative;
-    }
-
-    .ip-address {
-        font-weight: bold;
-        color: #2c3e50;
-    }
-
-    .hostname {
-        color: #7f8c8d;
-        font-size: 10px;
-    }
-
-    .stats-up {
-        color: #27ae60;
-    }
-
-    .stats-down {
-        color: #e74c3c;
-    }
-
-    .interface-name {
-        color: #3498db;
-    }
-</style>
-
 <script setup>
+    import '../assets/ListDevices.css';
+    import CardNavbar from './utils/CardNavbar.vue';
+    import { ref, onMounted } from 'vue';
+    
+    const customDevices = ref([
+    { name: "ROUTER", value: 3, length: 10, status: "Active" },
+    { name: "SWITCH", value: 3, length: 40, status: "Online" },
+    { name: "IPDSLAM", value: 13, length: 20, status: "Online" },
+    { name: "TCU", value: 3, length: 10, status: "Offline" },
+    { name: "R6K", value: 3, length: 30, status: "Online" },
+    { name: "2G", value: 3, length: 10, status: "Online" },
+    { name: "3G", value: 2, length: 10, status: "Maintenance" },
+    { name: "4G", value: 1, length: 10, status: "Online" },
+    { name: "5G", value: 9, length: 10, status: "Online" },
+    { name: "AIRPON", value: 3, length: 10, status: "Offline" },
+    ]);
+
+    const deviceNav = ref(null);
+    const selectedDevice = ref(null);
+
+    // Gestion des événements
+    function handleDeviceSelect(device, index) {
+    selectedDevice.value = device;
+    console.log('Appareil sélectionné:', device.name, 'Index:', index);
+    }
+
+    function handleNavigationChange(currentIndex, maxIndex) {
+    console.log('Navigation:', currentIndex, '/', maxIndex);
+    }
+
+    onMounted(() => {
+        console.log('CardNavbar ref:', deviceNav.value);
+    });
+  
 </script>

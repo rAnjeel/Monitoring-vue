@@ -1,12 +1,10 @@
 <template>
   <div class="form-container light-form">
-    <!-- Header -->
     <div class="form-header" v-if="title || subtitle">
       <h2 class="form-title" v-if="title">{{ title }}</h2>
       <p class="form-subtitle" v-if="subtitle">{{ subtitle }}</p>
     </div>
 
-    <!-- Form -->
     <Form :validation-schema="schema" @submit="handleSubmit" @reset="handleReset">
       <div v-for="field in fields" :key="field.name" class="form-group">
         <label :for="field.name" class="control-label">{{ field.label }}</label>
@@ -70,7 +68,6 @@ import { defineProps, defineEmits } from 'vue';
 import { Form, Field, ErrorMessage } from "vee-validate";
 import * as yup from "yup";
 
-// Props
 const props = defineProps({
   title: String,
   subtitle: String,
@@ -85,7 +82,6 @@ const props = defineProps({
   },
 });
 
-// Emits
 const emit = defineEmits(["submit", "reset"]);
 
 // Validation schema dynamique basé sur fields
@@ -133,7 +129,6 @@ const schema = yup.object().shape(
   }, {})
 );
 
-// Handlers
 function handleSubmit(values) {
   emit("submit", values);
 }

@@ -1,19 +1,9 @@
 <template>
-  <CardNavbar/>
   <ListDevices/>
 </template>
 
-<script>
-import ListDevices from './components/ListDevices.vue';
-import CardNavbar from './components/utils/CardNavbar.vue';
-
-export default {
-  name: 'App',
-  components: {
-    ListDevices,
-    CardNavbar
-  }
-}
+<script setup>
+  import ListDevices from './components/ListDevices.vue';
 </script>
 
 <style>
