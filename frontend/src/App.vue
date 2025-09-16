@@ -1,14 +1,17 @@
 <template>
+  <CardNavbar/>
   <ListDevices/>
 </template>
 
 <script>
 import ListDevices from './components/ListDevices.vue';
+import CardNavbar from './components/utils/CardNavbar.vue';
 
 export default {
   name: 'App',
   components: {
-    ListDevices
+    ListDevices,
+    CardNavbar
   }
 }
 </script>
@@ -18,8 +21,5 @@ export default {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
 }
 </style>
