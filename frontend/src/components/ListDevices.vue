@@ -270,3 +270,6 @@
         color: #3498db;
     }
 </style>
+
+<script setup>
+</script>
