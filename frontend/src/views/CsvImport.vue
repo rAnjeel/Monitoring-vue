@@ -145,10 +145,9 @@
         const data = parseCSV(text)
         if (!data.length) throw new Error('Fichier vide ou mal formaté')
 
-        // Envoi du JSON à NestJS
+        console.log('LIST DATA OBTENU', data)
         const res = await api.post('/devices/import', data)
 
-        // On récupère les résultats
         importResults.value = res.data
         showResultModal.value = true
 
