@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-  import ListDevices from './components/ListDevices.vue';
+  import ListDevices from './views/ListDevices.vue';
 </script>
 
 <style>

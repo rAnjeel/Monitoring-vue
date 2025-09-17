@@ -6,6 +6,13 @@
         @navigation-changed="handleNavigationChange"
         ref="deviceNav"
     />
+    <div class="app-container">
+        <AgGridModule
+            :column-defs="columns"
+            :row-data="rows"
+            :row-selection="{ mode: 'multiRow' }"
+        />
+    </div>
     <div class="sub-navbar">
         <div class="nav nav-tabs">
             <h4 class="text-uppercase" style="color: #ecf0f1;">Devices List</h4>
@@ -137,7 +144,8 @@
 </template>
 <script setup>
     import '../assets/ListDevices.css';
-    import CardNavbar from './utils/CardNavbar.vue';
+    import CardNavbar from '../components/utils/CardNavbar.vue';
+    import AgGridModule from '../components/utils/AgGridModule.vue';
     import { ref, onMounted } from 'vue';
     
     const customDevices = ref([
@@ -169,5 +177,16 @@
     onMounted(() => {
         console.log('CardNavbar ref:', deviceNav.value);
     });
-  
+    
+    const columns = ref([
+        { headerName: "ID", field: "id" },
+        { headerName: "Nom", field: "name" },
+        { headerName: "Statut", field: "status" }
+    ]);
+
+    const rows = ref([
+        { id: 1, name: "Routeur", status: "Actif" },
+        { id: 2, name: "Switch", status: "En ligne" },
+        { id: 3, name: "Serveur", status: "Hors ligne" }
+    ]);
 </script>
