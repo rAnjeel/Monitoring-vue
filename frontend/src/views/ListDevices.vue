@@ -144,8 +144,8 @@
 </template>
 <script setup>
     import '../assets/ListDevices.css';
-    import CardNavbar from '../components/utils/CardNavbar.vue';
-    import AgGridModule from '../components/utils/AgGridModule.vue';
+    import CardNavbar from '../components/CardNavbar.vue';
+    import AgGridModule from '../components/AgGridModule.vue';
     import { ref, onMounted } from 'vue';
     
     const customDevices = ref([
