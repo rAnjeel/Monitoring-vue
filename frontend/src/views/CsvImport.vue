@@ -1,90 +1,3 @@
-<script setup>
-import { ref, computed } from 'vue'
-import { parseCSV } from './utils/csv.js'
-import axios from 'axios'
-
-/* eslint-disable no-undef */
-const emit = defineEmits(['import', 'export'])
-const error = ref('')
-const fileRef = ref(null)
-const fileInput = ref(null)
-const isImporting = ref(false)
-const isDragOver = ref(false)
-const showResultModal = ref(false)
-const importResults = ref([])
-
-const api = axios.create({
-  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000',
-})
-
-function handleFileChange(event) {
-  fileRef.value = event.target.files[0] || null
-  console.log('[CsvImport] Fichier sélectionné :', fileRef.value?.name)
-}
-
-async function handleImport() {
-  if (!fileRef.value) {
-    error.value = 'Veuillez sélectionner un fichier CSV.'
-    return
-  }
-
-  const reader = new FileReader()
-  reader.onload = async (e) => {
-    try {
-      isImporting.value = true
-      const text = e.target.result
-      const data = parseCSV(text)
-      if (!data.length) throw new Error('Fichier vide ou mal formaté')
-      const res = await api.post('/import-csv', data)
-      importResults.value = res.data
-      showResultModal.value = true
-
-      emit('import', { data, name: fileRef.value.name })
-      error.value = ''
-    } catch (e) {
-      error.value = "Erreur lors de l'import : " + e.message
-    } finally {
-      isImporting.value = false
-    }
-  }
-  reader.readAsText(fileRef.value)
-}
-
-function closeResultModal() {
-  showResultModal.value = false
-  importResults.value = []
-}
-
-function handleDrop(e) {
-  e.preventDefault()
-  isDragOver.value = false
-  const file = e.dataTransfer?.files?.[0]
-  if (file && file.type.includes('csv') || file?.name?.endsWith('.csv')) {
-    fileRef.value = file
-  } else {
-    error.value = 'Format non supporté. Glissez un fichier .csv.'
-  }
-}
-
-function handleClear() {
-  fileRef.value = null
-  error.value = ''
-  if (fileInput.value) {
-    fileInput.value.value = ''
-  }
-}
-
-function formatBytes(bytes) {
-  if (!bytes && bytes !== 0) return ''
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(1024))
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
-}
-
-const fileName = computed(() => fileRef.value?.name || '')
-const fileSize = computed(() => fileRef.value ? formatBytes(fileRef.value.size) : '')
-</script>
-
 <template>
   <div class="container" style="margin-top:20px;">
     <div class="row">
@@ -182,7 +95,7 @@ const fileSize = computed(() => fileRef.value ? formatBytes(fileRef.value.size) 
               class="list-group-item"
               :class="{'list-group-item-success': result.status === 'success', 'list-group-item-danger': result.status === 'error'}"
             >
-              <strong>{{ result.status.toUpperCase() }}</strong> - {{ result.message }}
+              <strong>{{ result.status }}</strong> - {{ result.message }}
             </li>
           </ul>
         </div>
@@ -194,3 +107,93 @@ const fileSize = computed(() => fileRef.value ? formatBytes(fileRef.value.size) 
     </div>
   </div>
 </template>
+
+<script setup>
+  import { ref, computed, defineEmits } from 'vue'
+  import { parseCSV } from '../services/csv/importCSV.js'
+  import axios from 'axios'
+
+  const emit = defineEmits(['import', 'export'])
+  const error = ref('')
+  const fileRef = ref(null)
+  const fileInput = ref(null)
+  const isImporting = ref(false)
+  const isDragOver = ref(false)
+  const showResultModal = ref(false)
+  const importResults = ref([])
+
+  const api = axios.create({
+    baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000',
+  })
+
+  function handleFileChange(event) {
+    fileRef.value = event.target.files[0] || null
+    console.log('[CsvImport] Fichier sélectionné :', fileRef.value?.name)
+  }
+
+  async function handleImport() {
+    if (!fileRef.value) {
+      error.value = 'Veuillez sélectionner un fichier CSV.'
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        isImporting.value = true
+        const text = e.target.result
+        const data = parseCSV(text)
+        if (!data.length) throw new Error('Fichier vide ou mal formaté')
+
+        // Envoi du JSON à NestJS
+        const res = await api.post('/devices/import', data)
+
+        // On récupère les résultats
+        importResults.value = res.data
+        showResultModal.value = true
+
+        emit('import', { data, name: fileRef.value.name })
+        error.value = ''
+      } catch (e) {
+        error.value = "Erreur lors de l'import : " + e.message
+      } finally {
+        isImporting.value = false
+      }
+    }
+    reader.readAsText(fileRef.value)
+  }
+
+  function closeResultModal() {
+    showResultModal.value = false
+    importResults.value = []
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    isDragOver.value = false
+    const file = e.dataTransfer?.files?.[0]
+    if (file && file.type.includes('csv') || file?.name?.endsWith('.csv')) {
+      fileRef.value = file
+    } else {
+      error.value = 'Format non supporté. Glissez un fichier .csv.'
+    }
+  }
+
+  function handleClear() {
+    fileRef.value = null
+    error.value = ''
+    if (fileInput.value) {
+      fileInput.value.value = ''
+    }
+  }
+
+  function formatBytes(bytes) {
+    if (!bytes && bytes !== 0) return ''
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(1024))
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
+  }
+
+  const fileName = computed(() => fileRef.value?.name || '')
+  const fileSize = computed(() => fileRef.value ? formatBytes(fileRef.value.size) : '')
+</script>

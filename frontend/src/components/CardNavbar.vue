@@ -30,7 +30,7 @@
 
 <script setup>
   import { ref, computed, onMounted, onBeforeUnmount, watch, defineExpose, defineProps, defineEmits } from 'vue';
-  import '../../assets/CardContainer.css';
+  import '../assets/CardContainer.css';
 
   const props = defineProps({
     deviceList: {
