@@ -66,14 +66,17 @@
             const data = await getDevices();
             const devices = Array.isArray(data) ? data : (data && data.data ? data.data : []);
 
+            const columnsToHide = ['id'];
+
             if (!Array.isArray(devices)) {
                 throw new Error('Réponse inattendue du service devices');
             }
 
             const sample = devices[0] || {};
             const keys = Object.keys(sample || {});
+            const visibleKeys = keys.filter(key => !columnsToHide.includes(key));
 
-            columns.value = keys.map(key => ({
+            columns.value = visibleKeys.map(key => ({
                 headerName: key.replace(/_/g, ' ').toUpperCase(),
                 field: key
             }));

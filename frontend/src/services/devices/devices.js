@@ -7,7 +7,7 @@ const api = axios.create({
 export async function getDevices() {
   try {
     console.log('[GetDevices] Début de la récupération des devices...')
-    const response = await api.get('/devices')
+    const response = await api.get('/devices/list')
     console.log('[GetDevices] Succès:', {
       status: response.status,
       count: Array.isArray(response.data) ? response.data.length : (response.data && response.data.data ? response.data.data.length : undefined)
