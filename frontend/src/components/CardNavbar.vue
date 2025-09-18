@@ -31,7 +31,7 @@
 </template>
 
 <script setup>
-  import { ref, computed, onMounted, onBeforeUnmount, watch, defineExpose, defineProps, defineEmits } from 'vue';
+  import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, defineExpose, defineProps, defineEmits } from 'vue';
   import '../assets/CardContainer.css';
 
   const props = defineProps({
@@ -70,6 +70,7 @@
   const visibleCards = ref(props.initialVisibleCards);
   const cardRefs = ref([]);
   const cardsWrapper = ref(null);
+  let resizeObserver = null;
 
   const maxIndex = computed(() => Math.max(0, itemsResolved.value.length - visibleCards.value));
   const currentDevice = computed(() => itemsResolved.value[selectedIndex.value]);
@@ -140,6 +141,9 @@
     if (selectedIndex.value >= itemsResolved.value.length) {
       selectedIndex.value = 0;
     }
+    nextTick().then(() => {
+      requestAnimationFrame(() => updateSizes());
+    });
   }, { deep: true });
 
   watch(() => props.deviceList, (newDevices) => {
@@ -149,6 +153,9 @@
     if (selectedIndex.value >= itemsResolved.value.length) {
       selectedIndex.value = 0;
     }
+    nextTick().then(() => {
+      requestAnimationFrame(() => updateSizes());
+    });
   }, { deep: true });
 
   // Helpers for field access
@@ -169,13 +176,30 @@
   }
 
   // Cycle de vie
-  onMounted(() => {
-    updateSizes();
+  onMounted(async () => {
     window.addEventListener('resize', handleResize);
+    await nextTick();
+    requestAnimationFrame(() => {
+      updateSizes();
+    });
+    if (typeof ResizeObserver !== 'undefined' && cardsWrapper.value) {
+      resizeObserver = new ResizeObserver(() => {
+        updateSizes();
+      });
+      resizeObserver.observe(cardsWrapper.value);
+    }
   });
 
   onBeforeUnmount(() => {
     window.removeEventListener('resize', handleResize);
+    if (resizeObserver) {
+      try {
+        resizeObserver.disconnect();
+      } catch (e) {
+        console.warn('[CardNavbar] ResizeObserver disconnect failed', e);
+      }
+      resizeObserver = null;
+    }
   });
 
   // Exposition des méthodes

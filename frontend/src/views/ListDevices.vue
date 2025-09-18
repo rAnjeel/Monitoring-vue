@@ -55,16 +55,6 @@
     const error = ref(null);
     const lastUpdated = ref(null);
 
-    // Gestion des événements
-    function handleDeviceSelect(device, index) {
-        selectedDevice.value = device;
-        console.log('Appareil sélectionné:', device.name, 'Index:', index);
-    }
-
-    function handleNavigationChange(currentIndex, maxIndex) {
-        console.log('Navigation:', currentIndex, '/', maxIndex);
-    }
-
     const columns = ref([]);
     const rows = ref([]);
 
@@ -122,6 +112,16 @@
             loading.value = false;
             lastUpdated.value = new Date();
         }
+    }
+
+    // Gestion des événements
+    function handleDeviceSelect(device, index) {
+        selectedDevice.value = device;
+        console.log('Appareil sélectionné:', device.name, 'Index:', index);
+    }
+
+    function handleNavigationChange(currentIndex, maxIndex) {
+        console.log('Navigation:', currentIndex, '/', maxIndex);
     }
 
     onMounted(() => {
