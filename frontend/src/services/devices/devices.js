@@ -26,3 +26,4 @@ export async function getDevice(id) {
 export function createDevice(device) {
   return api.post('/devices', device)
 }
+
