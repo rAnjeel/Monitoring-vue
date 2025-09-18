@@ -110,8 +110,7 @@
 
 <script setup>
   import { ref, computed, defineEmits } from 'vue'
-  import { parseCSV } from '../services/csv/importCSV.js'
-  import axios from 'axios'
+  import { parseCSV, importDevices } from '../services/csv/importCSV.js'
 
   const emit = defineEmits(['import', 'export'])
   const error = ref('')
@@ -122,9 +121,7 @@
   const showResultModal = ref(false)
   const importResults = ref([])
 
-  const api = axios.create({
-    baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000',
-  })
+  
 
   function handleFileChange(event) {
     fileRef.value = event.target.files[0] || null
@@ -145,10 +142,7 @@
         const data = parseCSV(text)
         if (!data.length) throw new Error('Fichier vide ou mal formaté')
 
-        console.log('LIST DATA OBTENU', data)
-        const res = await api.post('/devices/import', data)
-
-        importResults.value = res.data
+        importResults.value = await importDevices(data)
         showResultModal.value = true
 
         emit('import', { data, name: fileRef.value.name })

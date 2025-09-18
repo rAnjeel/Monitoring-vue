@@ -1,3 +1,9 @@
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000',
+})
+
 export function parseCSV(text) {
   const rows = text.split(/\r?\n/).filter(Boolean)
   console.log('[parseCSV] Lignes brutes :', rows)
@@ -27,4 +33,23 @@ export function parseCSV(text) {
   })
   console.log('[parseCSV] Résultat final du parsing :', result)
   return result
+}
+
+export async function importDevices(data) {
+  try {
+    console.log("[ImportDevices] Début de l'import des devices...")
+    const response = await api.post('/devices/import', data)
+    console.log('[ImportDevices] Succès:', {
+      status: response.status,
+      count: Array.isArray(response.data) ? response.data.length : undefined
+    })
+    return response.data
+  } catch (error) {
+    const jsonErrorMessage = error && error.response && error.response.data
+      ? (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data))
+      : null
+    const message = jsonErrorMessage || error.message || 'Erreur inconnue'
+    console.error("[ImportDevices] Erreur lors de l'import:", message)
+    throw new Error(`Impossible d'importer les devices: ${message}`)
+  }
 }
