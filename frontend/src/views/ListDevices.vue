@@ -1,6 +1,6 @@
 <template>
     <CardNavbar
-        :device-list="customDevices"
+        :items="customDevices"
         :initial-visible-cards="4"
         @device-selected="handleDeviceSelect"
         @navigation-changed="handleNavigationChange"
@@ -41,26 +41,14 @@
 </template>
 
 <script setup>
-    import '../assets/ListDevices.css';
-    import CardNavbar from '../components/CardNavbar.vue';
-    import AgGridModule from '../components/AgGridModule.vue';
+    import '@/assets/ListDevices.css';
+    import CardNavbar from '@/components/CardNavbar.vue';
+    import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted } from 'vue';
-    import { getDevices } from '../services/devices/devices';
+    import { getDevices } from '@/services/devices/devices';
+    import { getTypeDevices } from '@/services/type devices/typeDevices';   
     
-    const customDevices = ref([
-    { name: "ROUTER", value: 3, length: 10, status: "Active" },
-    { name: "SWITCH", value: 3, length: 40, status: "Online" },
-    { name: "IPDSLAM", value: 13, length: 20, status: "Online" },
-    { name: "TCU", value: 3, length: 10, status: "Offline" },
-    { name: "R6K", value: 3, length: 30, status: "Online" },
-    { name: "2G", value: 3, length: 10, status: "Online" },
-    { name: "3G", value: 2, length: 10, status: "Maintenance" },
-    { name: "4G", value: 1, length: 10, status: "Online" },
-    { name: "5G", value: 9, length: 10, status: "Online" },
-    { name: "AIRPON", value: 3, length: 10, status: "Offline" },
-    ]);
-
-
+    const customDevices = ref([]);
     const deviceNav = ref(null);
     const selectedDevice = ref(null);
     const loading = ref(false);
@@ -110,8 +98,35 @@
         }
     }
 
+    async function loadTypeDevices() {
+        loading.value = true;
+        error.value = null;
+        try {
+            console.log('[LoadTypeDevices] Début du chargement des types devices...');
+            const data = await getTypeDevices();
+            const types = Array.isArray(data) ? data : (data && data.data ? data.data : []);
+
+            if (!Array.isArray(types)) {
+                throw new Error('Réponse inattendue du service type devices');
+            }
+
+            customDevices.value = types.map(t => ({
+                name: t.name,
+                value: 2,
+                length: 10,
+            }));
+        } catch (err) {
+            error.value = err.message;
+            console.error('[LoadTypeDevices] Erreur lors du chargement:', err);
+        } finally {
+            loading.value = false;
+            lastUpdated.value = new Date();
+        }
+    }
+
     onMounted(() => {
         console.log('CardNavbar ref:', deviceNav.value);
         loadDevices();
+        loadTypeDevices();
     });
 </script>

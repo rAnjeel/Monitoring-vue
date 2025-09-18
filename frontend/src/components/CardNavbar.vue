@@ -8,15 +8,17 @@
 
         <div class="cards-wrapper" :style="{ transform: `translateX(-${currentIndex * cardWidth}px)` }" ref="cardsWrapper">
           <div
-            v-for="(device, index) in devices"
-            :key="device.name"
+            v-for="(item, index) in itemsResolved"
+            :key="getItemKey(item, index)"
             class="device-card"
             :class="{ active: selectedIndex === index }"
             @click="selectDevice(index)"
             ref="cardRefs"
           >
-            <div class="device-label">{{ device.name }}</div>
-            <div class="device-number">{{ device.value }}/{{ device.length }}</div>
+            <slot name="card" :item="item" :index="index" :selected="selectedIndex === index">
+              <div class="device-label">{{ getItemLabel(item) }}</div>
+              <div class="device-number">{{ getItemValue(item) }}/{{ getItemLength(item) }}</div>
+            </slot>
           </div>
         </div>
 
@@ -33,21 +35,21 @@
   import '../assets/CardContainer.css';
 
   const props = defineProps({
+    // Backward-compat name kept for existing consumers
     deviceList: {
       type: Array,
-      default: () => [
-        { 
-          name: "ROUTER", 
-          value: 3, 
-          length: 10, 
-        },
-        { 
-          name: "SWITCH", 
-          value: 3, 
-          length: 40, 
-        },
-      ]
+      default: () => []
     },
+    // Preferred generic prop
+    items: {
+      type: Array,
+      default: () => []
+    },
+    // Field mapping for generic items
+    keyField: { type: String, default: 'name' },
+    labelField: { type: String, default: 'name' },
+    valueField: { type: String, default: 'value' },
+    lengthField: { type: String, default: 'length' },
     initialVisibleCards: {
       type: Number,
       default: 5,
@@ -61,7 +63,7 @@
 
   const emit = defineEmits(['device-selected', 'navigation-changed', 'device-update']);
 
-  const devices = ref(props.deviceList);
+  const itemsResolved = ref((props.items && props.items.length ? props.items : props.deviceList));
   const selectedIndex = ref(0);
   const currentIndex = ref(0);
   const cardWidth = ref(0);
@@ -69,8 +71,8 @@
   const cardRefs = ref([]);
   const cardsWrapper = ref(null);
 
-  const maxIndex = computed(() => Math.max(0, devices.value.length - visibleCards.value));
-  const currentDevice = computed(() => devices.value[selectedIndex.value]);
+  const maxIndex = computed(() => Math.max(0, itemsResolved.value.length - visibleCards.value));
+  const currentDevice = computed(() => itemsResolved.value[selectedIndex.value]);
 
   // Mise à jour responsive
   function updateSizes() {
@@ -110,15 +112,15 @@
 
   function selectDevice(index) {
     selectedIndex.value = index;
-    emit('device-selected', devices.value[index], index);
+    emit('device-selected', itemsResolved.value[index], index);
   }
 
   // Méthode pour mettre à jour les données d'un device
   function updateDeviceData(deviceName, newData) {
-    const index = devices.value.findIndex(d => d.name === deviceName);
+    const index = itemsResolved.value.findIndex(d => getItemLabel(d) === deviceName);
     if (index !== -1) {
-      devices.value[index] = { ...devices.value[index], ...newData };
-      emit('device-update', devices.value[index], index);
+      itemsResolved.value[index] = { ...itemsResolved.value[index], ...newData };
+      emit('device-update', itemsResolved.value[index], index);
     }
   }
 
@@ -131,12 +133,40 @@
     emit('navigation-changed', newIndex, maxIndex.value);
   });
 
-  watch(() => props.deviceList, (newDevices) => {
-    devices.value = newDevices;
-    if (selectedIndex.value >= newDevices.length) {
+  watch(() => props.items, (newItems) => {
+    if (newItems && newItems.length) {
+      itemsResolved.value = newItems;
+    }
+    if (selectedIndex.value >= itemsResolved.value.length) {
       selectedIndex.value = 0;
     }
   }, { deep: true });
+
+  watch(() => props.deviceList, (newDevices) => {
+    if (!props.items || props.items.length === 0) {
+      itemsResolved.value = newDevices;
+    }
+    if (selectedIndex.value >= itemsResolved.value.length) {
+      selectedIndex.value = 0;
+    }
+  }, { deep: true });
+
+  // Helpers for field access
+  function getItemKey(item, index) {
+    return item?.[props.keyField] ?? `${index}`;
+  }
+
+  function getItemLabel(item) {
+    return item?.[props.labelField] ?? '';
+  }
+
+  function getItemValue(item) {
+    return item?.[props.valueField] ?? '';
+  }
+
+  function getItemLength(item) {
+    return item?.[props.lengthField] ?? '';
+  }
 
   // Cycle de vie
   onMounted(() => {
@@ -157,9 +187,9 @@
     updateDeviceData,
     getCurrentDevice: () => currentDevice.value,
     getSelectedIndex: () => selectedIndex.value,
-    getDevices: () => devices.value,
-    setDevices: (newDevices) => {
-      devices.value = newDevices;
+    getItems: () => itemsResolved.value,
+    setItems: (newItems) => {
+      itemsResolved.value = newItems;
       updateSizes();
     }
   });
