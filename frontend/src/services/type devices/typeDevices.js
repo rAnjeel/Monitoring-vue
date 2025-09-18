@@ -8,6 +8,10 @@ export async function getTypeDevices() {
   try {
     console.log('[GetTypeDevices] Début de la récupération des types devices...')
     const response = await api.get('/type-devices')
+    console.log('[GetTypeDevices] Succès:', {
+      status: response.status,
+      count: Array.isArray(response.data) ? response.data.length : (response.data && response.data.data ? response.data.data.length : undefined)
+    })
     return response.data
   } catch (error) {
     const jsonErrorMessage = error && error.response && error.response.data
