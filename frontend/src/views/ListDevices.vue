@@ -14,20 +14,21 @@
 
     <div class="content-wrapper">
         <div class="filter-section">
-            <div class="row">
+            <div class="row" style="align-items:center; gap: 12px;">
                 <div class="col-md-2">
                     <strong>EXCEL</strong> Add port status
                 </div>
                 <div class="col-md-3">
-                    <label>Show</label>
-                    <select class="form-control input-sm" style="display: inline-block; width: 80px; margin: 0 5px;">
-                        <option>All</option>
-                        <option>10</option>
-                        <option>25</option>
-                        <option>50</option>
+                    <label style="margin-right:6px;">Show</label>
+                    <select v-model.number="pageSize" class="form-control input-sm" style="display:inline-block;width:80px;margin:0 5px;">
+                        <option :value="10">10</option>
+                        <option :value="25">25</option>
+                        <option :value="50">50</option>
+                        <option :value="100">100</option>
                     </select>
                     <span>entries</span>
                 </div>
+                
             </div>
         </div>
         <div class="app-container">
@@ -35,6 +36,8 @@
                 :column-defs="columns"
                 :row-data="rows"
                 :row-selection="{ mode: 'multiRow' }"
+                :pagination="true"
+                :page-size="pageSize"
             />
         </div>
     </div>
@@ -57,6 +60,7 @@
 
     const columns = ref([]);
     const rows = ref([]);
+    const pageSize = ref(25);
 
     async function loadDevices() {
         loading.value = true;
@@ -132,4 +136,6 @@
         loadDevices();
         loadTypeDevices();
     });
+
+    
 </script>
