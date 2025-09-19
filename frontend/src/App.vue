@@ -1,11 +1,13 @@
 <template>
   <ListDevices/>
   <CsvImport/>
+  <ListPorts/>
 </template>
 
 <script setup>
   import CsvImport from './views/CsvImport.vue';
-import ListDevices from './views/ListDevices.vue';
+  import ListDevices from './views/ListDevices.vue';
+  import ListPorts from './views/ListPorts.vue';
 </script>
 
 <style>
