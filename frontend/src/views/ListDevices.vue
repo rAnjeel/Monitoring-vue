@@ -35,7 +35,7 @@
                     </select>
                     <span style="margin-right:6px;">entries |</span>
                     <label class="form-label" style="margin-right:6px;">Go to page</label>
-                    <input type="number" min="1" :max="totalPagesDisplay" v-model.number="targetPage" @keyup.enter="jumpToPage" class="form-control input-sm" style="display:inline-block;width:80px;" />
+                    <input type="number" min="1" :max="totalPagesDisplay" v-model.number="targetPage" @keyup.enter="jumpToPage" class="form-control input-sm" style="display:inline-block;width:80px;margin-right: 6px;" />
                     <span class="form-label">/ {{ totalPagesDisplay }}</span>
                 </div>
                 <div class="col-md-1 col-md-offset-5">
