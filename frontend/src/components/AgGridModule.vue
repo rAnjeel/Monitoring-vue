@@ -2,7 +2,7 @@
   <div class="ag-grid-module">
     <ag-grid-vue
       class="ag-theme-quartz"
-      style="width: 100%; height: 400px;"
+      style="width: 100%; height: 500px;"
       :columnDefs="columnDefs"
       :rowData="rowData"
       :defaultColDef="defaultColDef"
@@ -15,11 +15,13 @@
 </template>
 
 <script setup>
-  import { ref, defineProps, watch } from 'vue';
+  import { ref, defineProps, watch, defineExpose, defineEmits } from 'vue';
   import { AgGridVue } from 'ag-grid-vue3';
   import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
 
   ModuleRegistry.registerModules([AllCommunityModule]);
+
+  const emit = defineEmits(['pagination-changed']);
 
   const props = defineProps({
     rowData: {
@@ -40,7 +42,7 @@
     },
     pageSize: {
       type: Number,
-      default: 25
+      default: 20
     },
     quickFilterText: {
       type: String,
@@ -67,6 +69,22 @@
     if (props.filterModel) {
       gridApi.value.setFilterModel(props.filterModel);
     }
+    // Fire initial pagination info
+    try {
+      const total = params.api.paginationGetTotalPages ? params.api.paginationGetTotalPages() : 0;
+      const current = params.api.paginationGetCurrentPage ? (params.api.paginationGetCurrentPage() + 1) : 1;
+      emit('pagination-changed', { totalPages: total, currentPage: current });
+    } catch (e) {
+      console.warn('[AgGridModule] pagination init error', e);
+    }
+    // Listen to pagination changes
+    if (params.api && params.api.addEventListener) {
+      params.api.addEventListener('paginationChanged', () => {
+        const total = params.api.paginationGetTotalPages ? params.api.paginationGetTotalPages() : 0;
+        const current = params.api.paginationGetCurrentPage ? (params.api.paginationGetCurrentPage() + 1) : 1;
+        emit('pagination-changed', { totalPages: total, currentPage: current });
+      });
+    }
   }
 
   watch(() => props.quickFilterText, (val) => {
@@ -84,6 +102,16 @@
       }
     }
   }, { deep: true });
+
+  // Expose pagination helpers to parent via component ref
+  defineExpose({
+    getTotalPages: () => (gridApi.value && gridApi.value.paginationGetTotalPages ? gridApi.value.paginationGetTotalPages() : 0),
+    goToPage: (pageIndex) => {
+      if (gridApi.value && gridApi.value.paginationGoToPage) {
+        gridApi.value.paginationGoToPage(pageIndex);
+      }
+    }
+  });
 </script>
 
 <style scoped>
