@@ -21,8 +21,7 @@
                 <div class="col-md-3">
                     <label style="margin-right:6px;">Show</label>
                     <select v-model.number="pageSize" class="form-control input-sm" style="display:inline-block;width:80px;margin:0 5px;">
-                        <option :value="10">10</option>
-                        <option :value="25">25</option>
+                        <option :value="20">20</option>
                         <option :value="50">50</option>
                         <option :value="100">100</option>
                     </select>
@@ -38,6 +37,7 @@
                 :row-selection="{ mode: 'multiRow' }"
                 :pagination="true"
                 :page-size="pageSize"
+                :filter-model="gridFilterModel"
             />
         </div>
     </div>
@@ -47,7 +47,7 @@
     import '@/assets/ListDevices.css';
     import CardNavbar from '@/components/CardNavbar.vue';
     import AgGridModule from '@/components/AgGridModule.vue';
-    import { ref, onMounted } from 'vue';
+    import { ref, onMounted, watch } from 'vue';
     import { getDevices } from '@/services/devices/devices';
     import { getTypeDevices } from '@/services/type devices/typeDevices';   
     
@@ -60,7 +60,8 @@
 
     const columns = ref([]);
     const rows = ref([]);
-    const pageSize = ref(25);
+    const pageSize = ref(20);
+    const gridFilterModel = ref(null);
 
     async function loadDevices() {
         loading.value = true;
@@ -125,6 +126,25 @@
     function handleDeviceSelect(device, index) {
         selectedDevice.value = device;
         console.log('Appareil sélectionné:', device.name, 'Index:', index);
+        
+        // Filtrer par type_device si la colonne existe
+        if (columns.value.some(col => col.field === 'type_device')) {
+            gridFilterModel.value = {
+                type_device: { 
+                    filterType: 'text', 
+                    type: 'contains', 
+                    filter: device.name 
+                }
+            };
+        } else {
+            gridFilterModel.value = {
+                global: { 
+                    filterType: 'text', 
+                    type: 'contains', 
+                    filter: device.name 
+                }
+            };
+        }
     }
 
     function handleNavigationChange(currentIndex, maxIndex) {
@@ -137,5 +157,11 @@
         loadTypeDevices();
     });
 
+    // Watch pour réinitialiser le filtre si pas de device sélectionné
+    watch(selectedDevice, (newDevice) => {
+        if (!newDevice) {
+            gridFilterModel.value = null;
+        }
+    });
     
 </script>
