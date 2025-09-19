@@ -1,7 +1,8 @@
 <template>
     <div class="sub-navbar">
         <div class="nav nav-tabs">
-            <h4 class="text-uppercase" style="color:#ecf0f1;">
+            <h4 class="text-uppercase" style="color:#ecf0f1; gap:12px;">
+                <span class="glyphicon glyphicon-triangle-right" aria-hidden="true" style="margin-right: 6px;"></span>
                 <span>Type Devices</span>
                 <span class="label label-primary" title="Nombre de types">{{ totalTypes }}</span>
             </h4>
@@ -17,6 +18,7 @@
     <div class="sub-navbar">
         <div class="nav nav-tabs">
             <h4 class="text-uppercase" style="color: #ecf0f1; gap:12px;">
+                <span class="glyphicon glyphicon-triangle-right" aria-hidden="true" style="margin-right: 6px;"></span>
                 <span>Devices</span>
                 <span class="label label-primary" title="Total devices">{{ totalDevices }}</span>
             </h4>
