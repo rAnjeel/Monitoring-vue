@@ -19,7 +19,7 @@
         <div class="nav nav-tabs">
             <h4 class="text-uppercase" style="color: #ecf0f1; gap:12px;">
                 <span class="glyphicon glyphicon-triangle-right" aria-hidden="true" style="margin-right: 6px;"></span>
-                <span>Devices</span>
+                <span>Devices list</span>
                 <span class="label label-primary" title="Total devices">{{ totalDevices }}</span>
             </h4>
         </div>
