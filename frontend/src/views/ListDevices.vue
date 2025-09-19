@@ -108,10 +108,19 @@
                 throw new Error('Réponse inattendue du service type devices');
             }
 
+            // Compter le nombre de devices par type_device
+            const deviceCountByType = {};
+            if (rows.value && rows.value.length > 0) {
+                rows.value.forEach(device => {
+                    const typeName = device.type_device || 'Unknown';
+                    deviceCountByType[typeName] = (deviceCountByType[typeName] || 0) + 1;
+                });
+            }
+
             customDevices.value = types.map(t => ({
                 name: t.name,
-                value: 2,
-                length: 10,
+                value: deviceCountByType[t.name] || 0,
+                length: deviceCountByType[t.name] || 0,
             }));
         } catch (err) {
             error.value = err.message;
@@ -125,25 +134,32 @@
     // Gestion des événements
     function handleDeviceSelect(device, index) {
         selectedDevice.value = device;
-        console.log('Appareil sélectionné:', device.name, 'Index:', index);
         
-        // Filtrer par type_device si la colonne existe
-        if (columns.value.some(col => col.field === 'type_device')) {
-            gridFilterModel.value = {
-                type_device: { 
-                    filterType: 'text', 
-                    type: 'contains', 
-                    filter: device.name 
-                }
-            };
+        if (device && index >= 0) {
+            console.log('Appareil sélectionné:', device.name, 'Index:', index);
+            
+            // Filtrer par type_device si la colonne existe
+            if (columns.value.some(col => col.field === 'type_device')) {
+                gridFilterModel.value = {
+                    type_device: { 
+                        filterType: 'text', 
+                        type: 'contains', 
+                        filter: device.name 
+                    }
+                };
+            } else {
+                gridFilterModel.value = {
+                    global: { 
+                        filterType: 'text', 
+                        type: 'contains', 
+                        filter: device.name 
+                    }
+                };
+            }
         } else {
-            gridFilterModel.value = {
-                global: { 
-                    filterType: 'text', 
-                    type: 'contains', 
-                    filter: device.name 
-                }
-            };
+            console.log('Appareil désélectionné');
+            // Désélection = pas de filtre
+            gridFilterModel.value = null;
         }
     }
 
@@ -151,10 +167,10 @@
         console.log('Navigation:', currentIndex, '/', maxIndex);
     }
 
-    onMounted(() => {
+    onMounted(async () => {
         console.log('CardNavbar ref:', deviceNav.value);
-        loadDevices();
-        loadTypeDevices();
+        await loadDevices();
+        await loadTypeDevices();
     });
 
     // Watch pour réinitialiser le filtre si pas de device sélectionné
