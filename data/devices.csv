@@ -1,3 +1,4 @@
+device_id,id,ip,hostname,sysName,status,Ping_status,type_device_id,location_id,codesite,loss,avg,min,max,uptime,snmp_disable,community,authlevel,authname,authpass,authalgo,cryptopass,cryptoalgo,snmpver,ne_id
 "81","1",\N,"154.126.76.3","hw-ana-er-1.mg","1","1","1","3",\N,"60","248.675","2.21","984.63","2024-05-06 09:20:09","0","753con159v2",\N,\N,\N,\N,\N,\N,"v2c","8374"
 "82","2",\N,"154.126.76.4","hw-ana-er-2.mg","1","1","1","3",\N,"0","1.437","0.976","4.49","2023-10-11 10:46:52","0","753con159v2",\N,\N,\N,\N,\N,\N,"v2c","8375"
 "83","3",\N,"154.126.76.5","hw-gal-er-1.mg","1","0","1","3","","100",\N,\N,\N,"2025-07-17 01:41:42","0","753con159v2","noAuthNoPriv","","","MD5","","AES","v2c","8376"
