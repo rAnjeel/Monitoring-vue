@@ -44,9 +44,11 @@
             />
         </div>
     </div>
+    <CsvImport import-type="ports" />
 </template>
 
 <script setup>
+    import CsvImport from '@/views/CsvImport.vue';
     import '@/assets/ListDevices.css';
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, computed } from 'vue';

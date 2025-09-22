@@ -46,9 +46,15 @@
                 <button class="btn btn-default" @click="$router.push('/')" style="margin-right:6px; border-radius: 50px;">
                   <span class="glyphicon glyphicon-home"></span>
                 </button>
-                <button class="btn btn-primary btn-sm" type="button" :disabled="!fileName || isImporting" @click="handleImport">
+                <button 
+                  :class="importType === 'ports' ? 'btn btn-success' : 'btn btn-primary'" 
+                  class="btn-sm" 
+                  type="button" 
+                  :disabled="!fileName || isImporting" 
+                  @click="handleImport"
+                >
                   <span v-if="isImporting" class="glyphicon glyphicon-refresh spinning" style="margin-right:5px;"></span>
-                  Import
+                  {{ importButtonText }}
                 </button>
                 <button class="btn btn-link btn-sm" type="button" @click="handleClear" :disabled="!fileName">
                   Clear
@@ -109,8 +115,16 @@
 </template>
 
 <script setup>
-  import { ref, computed, defineEmits } from 'vue'
-  import { parseCSV, importDevices } from '../services/csv/importCSV.js'
+  import { ref, computed, defineEmits, defineProps } from 'vue'
+  import { parseCSV, importDevices, importPorts } from '../services/csv/importCSV.js'
+
+  const props = defineProps({
+    importType: {
+      type: String,
+      default: 'devices',
+      validator: (value) => ['devices', 'ports'].includes(value)
+    }
+  })
 
   const emit = defineEmits(['import', 'export'])
   const error = ref('')
@@ -142,13 +156,16 @@
         const data = parseCSV(text)
         if (!data.length) throw new Error('Fichier vide ou mal formaté')
 
-        importResults.value = await importDevices(data)
+        // Choisir la fonction d'import selon le type
+        const importFunction = props.importType === 'ports' ? importPorts : importDevices
+
+        importResults.value = await importFunction(data)
         showResultModal.value = true
 
-        emit('import', { data, name: fileRef.value.name })
+        emit('import', { data, name: fileRef.value.name, type: props.importType })
         error.value = ''
       } catch (e) {
-        error.value = "Erreur lors de l'import : " + e.message
+        error.value = `Erreur lors de l'import ${props.importType === 'ports' ? 'des ports' : 'des devices'} : ` + e.message
       } finally {
         isImporting.value = false
       }
@@ -189,4 +206,7 @@
 
   const fileName = computed(() => fileRef.value?.name || '')
   const fileSize = computed(() => fileRef.value ? formatBytes(fileRef.value.size) : '')
+  const importButtonText = computed(() => {
+    return props.importType === 'ports' ? 'Import Ports' : 'Import Devices'
+  })
 </script>
