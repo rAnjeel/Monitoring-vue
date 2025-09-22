@@ -75,7 +75,7 @@
             const data = await getPorts();
             const ports = Array.isArray(data) ? data : (data && data.data ? data.data : []);
             
-            const columnsToHide = ['ne_id'];
+            const columnsToHide = ['ne_id', 'device_id', 'hostname', 'sysName', 'sysname'];
 
             if (!Array.isArray(ports)) {
                 throw new Error('Réponse inattendue du service ports');
@@ -85,10 +85,54 @@
             const keys = Object.keys(sample || {});
             const visibleKeys = keys.filter(key => !columnsToHide.includes(key));
 
-            columns.value = visibleKeys.map(key => ({
-                headerName: key.replace(/_/g, ' ').toUpperCase(),
-                field: key
-            }));
+            const otherColumns = visibleKeys
+                .filter(key => !['hostname', 'sysName', 'sysname'].includes(key))
+                .map(key => ({
+                    headerName: key.replace(/_/g, ' ').toUpperCase(),
+                    field: key
+                }));
+
+            const hasHostOrSys = keys.includes('hostname') || keys.includes('sysName') || keys.includes('sysname');
+
+            if (hasHostOrSys) {
+                const deviceCol = {
+                    headerName: 'DEVICE',
+                    colId: 'device',
+                    wrapText: true,
+                    autoHeight: true,
+                    minWidth: 220,
+                    valueGetter: (params) => {
+                        const hostname = params.data?.hostname || '';
+                        const sysName = params.data?.sysName || params.data?.sysname || '';
+                        return [hostname, sysName].filter(Boolean).join(' ');
+                    },
+                    cellRenderer: (params) => {
+                        const hostname = params.data?.hostname || '';
+                        const sysName = params.data?.sysName || params.data?.sysname || '';
+                        const container = document.createElement('div');
+                        container.style.display = 'flex';
+                        container.style.flexDirection = 'column';
+                        container.style.justifyContent = 'center';
+                        container.style.lineHeight = '1.2';
+                        const line1 = document.createElement('div');
+                        line1.style.fontWeight = '600';
+                        line1.style.color = '#2c3e50';
+                        line1.textContent = hostname || sysName || '';
+                        container.appendChild(line1);
+                        if (hostname && sysName && hostname !== sysName) {
+                            const line2 = document.createElement('div');
+                            line2.style.fontSize = '12px';
+                            line2.style.color = '#7f8c8d';
+                            line2.textContent = sysName;
+                            container.appendChild(line2);
+                        }
+                        return container;
+                    }
+                };
+                columns.value = [deviceCol, ...otherColumns];
+            } else {
+                columns.value = otherColumns;
+            }
 
             rows.value = ports;
         } catch (err) {

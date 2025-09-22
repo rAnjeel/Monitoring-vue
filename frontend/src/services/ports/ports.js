@@ -7,7 +7,7 @@ const api = axios.create({
 export async function getPorts() {
   try {
     console.log('[GetPorts] Début de la récupération des ports...')
-    const response = await api.get('/ports')
+    const response = await api.get('/ports/list')
     console.log('[GetPorts] Succès:', {
       status: response.status,
       count: Array.isArray(response.data) ? response.data.length : (response.data && response.data.data ? response.data.data.length : undefined)
