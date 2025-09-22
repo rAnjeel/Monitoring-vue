@@ -198,7 +198,6 @@
                 throw new Error('Réponse inattendue du service type devices');
             }
 
-            // Compter le nombre de devices par type_device
             const deviceCountByType = {};
             if (rows.value && rows.value.length > 0) {
                 rows.value.forEach(device => {
@@ -271,7 +270,7 @@
         if (page > total) page = total;
         targetPage.value = page;
         if (api && api.goToPage) {
-            api.goToPage(page - 1); // ag-Grid est 0-based
+            api.goToPage(page - 1);
         }
     }
 
