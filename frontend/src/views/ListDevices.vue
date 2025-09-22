@@ -27,27 +27,42 @@
 
     <div class="content-wrapper">
         <div class="filter-section">
-            <div class="row" style="align-items:center; gap: 12px;">
+            <div class="row" style="align-items:center;">
+                
+                <!-- Bloc gauche -->
                 <div class="col-md-6">
-                    <label class="form-label">Show</label>
-                    <select v-model.number="pageSize" class="form-control input-sm" style="display:inline-block;width:80px;margin:0 5px;">
-                        <option :value="20">20</option>
-                        <option :value="50">50</option>
-                        <option :value="100">100</option>
-                    </select>
-                    <span style="margin-right:6px;">entries |</span>
-                    <label class="form-label" style="margin-right:6px;">Go to page</label>
-                    <input type="number" min="1" :max="totalPagesDisplay" v-model.number="targetPage" @keyup.enter="jumpToPage" class="form-control input-sm" style="display:inline-block;width:80px;margin-right: 6px;" />
-                    <span class="form-label">/ {{ totalPagesDisplay }}</span>
+                <label class="form-label">Show</label>
+                <select v-model.number="pageSize" class="form-control input-sm" style="display:inline-block;width:80px;margin:0 5px;">
+                    <option :value="20">20</option>
+                    <option :value="50">50</option>
+                    <option :value="100">100</option>
+                </select>
+                <span style="margin-right:6px;">entries |</span>
+                <label class="form-label" style="margin-right:6px;">Go to page</label>
+                <input type="number" min="1" :max="totalPagesDisplay" v-model.number="targetPage" 
+                        @keyup.enter="jumpToPage" 
+                        class="form-control input-sm" 
+                        style="display:inline-block;width:80px;margin-right: 6px;" />
+                <span class="form-label">/ {{ totalPagesDisplay }}</span>
                 </div>
-                <div class="col-md-1 col-md-offset-5">
-                    <button @click="reloadGrid" class="btn btn-sm btn-info" style="margin-right:8px;" :disabled="loading">
-                        <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
-                        Reload
+                
+                <!-- Bloc droite -->
+                <div class="col-md-6 text-right">
+                <div class="btn-group" role="group" style="gap:8px;">
+                    <button @click="showImportDevices = true" class="btn btn-sm btn-primary" style="margin-right: 8px;">
+                    <span class="glyphicon glyphicon-upload"></span>
+                    Import CSV
                     </button>
-                </div>                
+                    <button @click="reloadGrid" class="btn btn-sm btn-info" :disabled="loading">
+                    <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
+                    Reload
+                    </button>
+                </div>
+                </div>
+
             </div>
         </div>
+
         <div class="app-container">
             <AgGridModule
                 :column-defs="columns"
@@ -61,7 +76,7 @@
             />
         </div>
     </div>
-    <CsvImport import-type="devices" />
+    <CsvImport v-model="showImportDevices" :import-type="'devices'" @import="reloadGrid" />
 </template>
 
 <script setup>
@@ -87,6 +102,7 @@
     const agGridRef = ref(null);
     const targetPage = ref(1);
     const totalPagesDisplay = ref(1);
+    const showImportDevices = ref(false);
 
     // UX counters for cards header
     const totalTypes = computed(() => customDevices.value?.length || 0);
