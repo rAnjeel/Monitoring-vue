@@ -1,3 +1,4 @@
+id, port_id, device_id, ifName, ifIndex, ifSpeed, ifConnectorPresent, ifPromiscuousMode, ifHighSpeed, ifDescr, ifAlias, ifInOctets, ifOutOctets, ifOperStatus, ifAdminStatus, ifMtu, ifType, ifPhysAddress, ne_id
 "421188","1201336","1203","qsfpplus1-2","26","0",\N,\N,\N,"qsfpplus1-2","qsfpplus1-2","0","0","down","down","1500","ethernetCsmacd","18fd740842c8",\N
 "421189","1624658","1203","sfp-sfpplus7","7","0",\N,\N,\N,"sfp-sfpplus7","sfp-sfpplus7","22002421","281958853","down","down","1500","ethernetCsmacd","18fd740842b5",\N
 "421190","1201339","1203","qsfpplus2-1","29","0",\N,\N,\N,"qsfpplus2-1","qsfpplus2-1","0","0","down","down","1500","ethernetCsmacd","18fd740842cb",\N
