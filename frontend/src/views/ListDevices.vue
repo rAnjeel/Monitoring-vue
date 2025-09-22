@@ -63,6 +63,14 @@
             </div>
         </div>
 
+        <!-- Loading overlay -->
+        <div v-if="loading" class="loading-overlay">
+          <div class="loading-box">
+            <span class="glyphicon glyphicon-refresh spinning" style="font-size:24px; margin-right:8px;"></span>
+            <span>Loading...</span>
+          </div>
+        </div>
+
         <div class="app-container">
             <AgGridModule
                 :column-defs="columns"
@@ -82,6 +90,7 @@
 <script setup>
     import CsvImport from '@/views/CsvImport.vue';
     import '@/assets/ListDevices.css';
+    import '@/assets/Loading.css';
     import CardNavbar from '@/components/CardNavbar.vue';
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, watch, computed } from 'vue';
@@ -296,12 +305,4 @@
 
 <style scoped>
 
-.spinning {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
 </style>
