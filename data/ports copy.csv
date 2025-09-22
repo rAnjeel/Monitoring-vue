@@ -1,0 +1,37 @@
+id, port_id, device_id, ifName, ifIndex, ifSpeed, ifConnectorPresent, ifPromiscuousMode, ifHighSpeed, ifDescr, ifAlias, ifInOctets, ifOutOctets, ifOperStatus, ifAdminStatus, ifMtu, ifType, ifPhysAddress, ne_id
+"1","473","8","Cpos1/0/0","100","155000000","true","false","155","Cpos1/0/0","Cpos1/0/0","0","0","up","up","0","pos","000000000000",\N
+"2","474","8","Cpos1/0/1","101","155000000","true","false","155","Cpos1/0/1","Cpos1/0/1","0","0","down","down","0","pos","000000000000",\N
+"3","475","8","Cpos1/0/2","102","155000000","true","false","155","Cpos1/0/2","Cpos1/0/2","0","0","down","down","0","pos","000000000000",\N
+"4","476","8","Cpos1/0/3","103","155000000","true","false","155","Cpos1/0/3","Cpos1/0/3","0","0","down","down","0","pos","000000000000",\N
+"5","11422","18","NULL0","1","0","false","false","0","NULL0","NULL0","0","0","up","up","1500","other","000000000000",\N
+"6","11423","18","InLoopBack0","2","0","false","false","0","InLoopBack0","InLoopBack0","0","0","up","up","1500","softwareLoopback","000000000000",\N
+"7","11424","18","GigabitEthernet0/0/0","3","10000000","true","false","10","GigabitEthernet0/0/0","acces|0|nsb-hlv-ar-1-outband-mgt","0","0","down","up","1500","ethernetCsmacd","04bd70f8d880",\N
+"8","11425","2","InLoopBack0","1","0","false","false","0","InLoopBack0","HUAWEI, InLoopBack0 Interface","48948201","2290756","up","up","1500","softwareLoopback","000000000000",\N
+"9","11426","2","NULL0","2","0","false","false","0","NULL0","HUAWEI, NULL0 Interface","0","0","up","up","1500","other","000000000000",\N
+"10","11427","2","Console0/0/0","3","0","true","false","0","Console0/0/0","HUAWEI, Console0/0/0 Interface","0","0","up","up","0","other","000000000000",\N
+"11","11428","2","GigabitEthernet0/0/0","4","1000000000","true","false","1000","GigabitEthernet0/0/0","management|hw-ana-er-2.mg|port-0/0/0","495130994","4717284","up","up","1500","ethernetCsmacd","244c0733bc6e",\N
+"12","11429","2","Aux0/0/1","5","0","true","false","0","Aux0/0/1","HUAWEI, Aux0/0/1 Interface","0","0","down","up","1500","ppp","000000000000",\N
+"13","11430","23","NULL0","1","0","false","false","0","NULL0","NULL0","0","0","up","up","1500","other","000000000000",\N
+"14","11431","23","InLoopBack0","2","0","false","false","0","InLoopBack0","InLoopBack0","0","0","up","up","1500","softwareLoopback","000000000000",\N
+"15","11432","23","GigabitEthernet0/0/0","3","10000000","true","false","10","GigabitEthernet0/0/0","GigabitEthernet0/0/0","0","0","down","down","1500","ethernetCsmacd","707990077b7d",\N
+"16","11433","23","GigabitEthernet2/0/0","6","1000000000","true","false","1000","GigabitEthernet2/0/0","GigabitEthernet2/0/0","0","0","down","down","1500","ethernetCsmacd","7079901568f9",\N
+"17","11434","23","GigabitEthernet2/0/1","7","1000000000","true","false","1000","GigabitEthernet2/0/1","GigabitEthernet2/0/1","0","0","down","down","1500","ethernetCsmacd","7079901568fa",\N
+"18","11435","23","GigabitEthernet2/0/2","8","1000000000","true","false","1000","GigabitEthernet2/0/2","GigabitEthernet2/0/2","0","0","down","down","1500","ethernetCsmacd","7079901568fb",\N
+"19","11436","23","GigabitEthernet2/0/3","9","1000000000","true","false","1000","GigabitEthernet2/0/3","GigabitEthernet2/0/3","0","0","down","down","1500","ethernetCsmacd","7079901568fc",\N
+"20","11437","23","GigabitEthernet2/0/4","10","1000000000","true","false","1000","GigabitEthernet2/0/4","GigabitEthernet2/0/4","0","0","down","down","1500","ethernetCsmacd","7079901568fd",\N
+"21","11438","23","GigabitEthernet2/0/5","11","1000000000","true","false","1000","GigabitEthernet2/0/5","GigabitEthernet2/0/5","0","0","down","down","1500","ethernetCsmacd","7079901568fe",\N
+"22","11439","23","GigabitEthernet2/0/6","12","1000000000","true","false","1000","GigabitEthernet2/0/6","GigabitEthernet2/0/6","0","0","down","down","1500","ethernetCsmacd","7079901568ff",\N
+"23","11440","23","GigabitEthernet2/0/7","13","1000000000","true","false","1000","GigabitEthernet2/0/7","GigabitEthernet2/0/7","0","0","down","down","1500","ethernetCsmacd","707990156900",\N
+"24","11441","23","GigabitEthernet2/0/8","14","1000000000","true","false","1000","GigabitEthernet2/0/8","GigabitEthernet2/0/8","0","0","down","down","1500","ethernetCsmacd","707990156901",\N
+"25","11442","23","GigabitEthernet2/0/9","15","1000000000","true","false","1000","GigabitEthernet2/0/9","GigabitEthernet2/0/9","0","0","down","down","1500","ethernetCsmacd","707990156902",\N
+"26","11443","23","GigabitEthernet2/0/10","16","1000000000","true","false","1000","GigabitEthernet2/0/10","GigabitEthernet2/0/10","0","0","down","down","1500","ethernetCsmacd","707990156903",\N
+"27","11444","23","GigabitEthernet2/0/11","17","1000000000","true","false","1000","GigabitEthernet2/0/11","GigabitEthernet2/0/11","0","0","down","down","1500","ethernetCsmacd","707990156904",\N
+"28","11445","23","GigabitEthernet2/0/12","18","1000000000","true","false","1000","GigabitEthernet2/0/12","GigabitEthernet2/0/12","0","0","down","down","1500","ethernetCsmacd","707990156905",\N
+"29","11446","23","GigabitEthernet2/0/13","19","1000000000","true","false","1000","GigabitEthernet2/0/13","GigabitEthernet2/0/13","0","0","down","down","1500","ethernetCsmacd","707990156906",\N
+"30","11447","23","GigabitEthernet2/0/14","20","1000000000","true","false","1000","GigabitEthernet2/0/14","GigabitEthernet2/0/14","0","0","down","down","1500","ethernetCsmacd","707990156907",\N
+"31","11448","23","GigabitEthernet2/0/15","21","1000000000","true","false","1000","GigabitEthernet2/0/15","GigabitEthernet2/0/15","0","0","down","down","1500","ethernetCsmacd","707990156908",\N
+"32","11449","23","GigabitEthernet2/0/16","22","1000000000","true","false","1000","GigabitEthernet2/0/16","GigabitEthernet2/0/16","0","0","down","down","1500","ethernetCsmacd","707990156909",\N
+"33","11450","23","GigabitEthernet2/0/17","23","1000000000","true","false","1000","GigabitEthernet2/0/17","GigabitEthernet2/0/17","0","0","down","down","1500","ethernetCsmacd","70799015690a",\N
+"34","11451","23","GigabitEthernet2/0/18","24","1000000000","true","false","1000","GigabitEthernet2/0/18","GigabitEthernet2/0/18","0","0","down","down","1500","ethernetCsmacd","70799015690b",\N
+"35","11452","23","GigabitEthernet2/0/19","25","1000000000","true","false","1000","GigabitEthernet2/0/19","GigabitEthernet2/0/19","0","0","down","down","1500","ethernetCsmacd","70799015690c",\N
+"36","11453","23","GigabitEthernet2/0/20","26","1000000000","true","false","1000","GigabitEthernet2/0/20","GigabitEthernet2/0/20","0","0","down","down","1500","ethernetCsmacd","70799015690d",\N

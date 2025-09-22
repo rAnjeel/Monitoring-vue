@@ -53,3 +53,25 @@ export async function importDevices(data) {
     throw new Error(`Impossible d'importer les devices: ${message}`)
   }
 }
+
+export async function importPorts(data) {
+  try {
+    console.log("[ImportPorts] Début de l'import des ports...");
+    const response = await api.post('/ports/import', data);
+    console.log('[ImportPorts] Succès:', {
+      status: response.status,
+      count: Array.isArray(response.data) ? response.data.length : undefined,
+    });
+    return response.data;
+  } catch (error) {
+    const jsonErrorMessage =
+      error && error.response && error.response.data
+        ? error.response.data.message ||
+          error.response.data.error ||
+          JSON.stringify(error.response.data)
+        : null;
+    const message = jsonErrorMessage || error.message || 'Erreur inconnue';
+    console.error("[ImportPorts] Erreur lors de l'import:", message);
+    throw new Error(`Impossible d'importer les ports: ${message}`);
+  }
+}

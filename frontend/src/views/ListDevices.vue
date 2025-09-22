@@ -61,9 +61,11 @@
             />
         </div>
     </div>
+    <CsvImport import-type="devices" />
 </template>
 
 <script setup>
+    import CsvImport from '@/views/CsvImport.vue';
     import '@/assets/ListDevices.css';
     import CardNavbar from '@/components/CardNavbar.vue';
     import AgGridModule from '@/components/AgGridModule.vue';
