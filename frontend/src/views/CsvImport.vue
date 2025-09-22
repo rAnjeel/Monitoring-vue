@@ -93,15 +93,33 @@
       >
         <h4 style="font-weight:bold; margin-bottom:15px;">Import result</h4>
 
-        <div style="max-height:300px; overflow-y:auto; text-align:left;">
+        <div v-if="importResults" style="max-height:300px; overflow-y:auto; text-align:left;">
+          <div class="alert alert-info" role="alert" style="margin-bottom:10px;">
+            {{ importResults.message }}
+          </div>
+
           <ul class="list-group">
-            <li
-              v-for="(result, idx) in importResults"
-              :key="idx"
-              class="list-group-item"
-              :class="{'list-group-item-success': result.status === 'success', 'list-group-item-danger': result.status === 'error'}"
-            >
-              <strong>{{ result.status }}</strong> - {{ result.message }}
+            <li class="list-group-item">
+              <strong>Processed:</strong> {{ importResults.createdOrUpdated }}/{{ importResults.count }}
+            </li>
+
+            <li v-if="importResults.successes && importResults.successes.length" class="list-group-item list-group-item-success">
+              <strong>Successes ({{ importResults.successes.length }}):</strong>
+              <ul style="margin:8px 0 0 15px;">
+                <li v-for="(name, i) in importResults.successes" :key="'s'+i">{{ name }}</li>
+              </ul>
+            </li>
+
+            <li v-if="importResults.errors && importResults.errors.length" class="list-group-item list-group-item-danger">
+              <strong>Errors ({{ importResults.errors.length }}):</strong>
+              <ul style="margin:8px 0 0 15px;">
+                <li v-for="(err, i) in importResults.errors" :key="'e'+i">
+                  <span v-if="err.hostname || err.ifName">
+                    {{ err.hostname || err.ifName }}:
+                  </span>
+                  <span>{{ err.error || err.message }}</span>
+                </li>
+              </ul>
             </li>
           </ul>
         </div>
@@ -133,7 +151,29 @@
   const isImporting = ref(false)
   const isDragOver = ref(false)
   const showResultModal = ref(false)
-  const importResults = ref([])
+  const importResults = ref(null)
+
+  function normalizeImportResult(result, type) {
+    if (!result || typeof result !== 'object') {
+      return {
+        message: 'Aucun résultat',
+        count: 0,
+        createdOrUpdated: 0,
+        successes: [],
+        errors: [],
+      }
+    }
+    const isPorts = type === 'ports' || ('successPorts' in result) || ('errorPorts' in result)
+    const successes = isPorts ? (result.successPorts || []) : (result.successHostnames || [])
+    const errors = Array.isArray(result.errors) ? result.errors : []
+    return {
+      message: result.message || `Import terminé: ${result.createdOrUpdated || 0}/${result.count || 0} lignes`,
+      count: result.count ?? 0,
+      createdOrUpdated: result.createdOrUpdated ?? 0,
+      successes,
+      errors,
+    }
+  }
 
   
 
@@ -159,7 +199,8 @@
         // Choisir la fonction d'import selon le type
         const importFunction = props.importType === 'ports' ? importPorts : importDevices
 
-        importResults.value = await importFunction(data)
+        const rawResult = await importFunction(data)
+        importResults.value = normalizeImportResult(rawResult, props.importType)
         showResultModal.value = true
 
         emit('import', { data, name: fileRef.value.name, type: props.importType })
@@ -175,7 +216,7 @@
 
   function closeResultModal() {
     showResultModal.value = false
-    importResults.value = []
+    importResults.value = null
   }
 
   function handleDrop(e) {
