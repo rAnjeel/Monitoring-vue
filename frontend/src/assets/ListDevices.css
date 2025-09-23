@@ -61,14 +61,3 @@ body {
     margin-bottom: 20px;
     border-radius: 2px;
 }
-.ag-theme-quartz.ag-row.up-row.ag-row{
-  border-left: 4px solid #27ae60 !important;
-}
-
-.ag-theme-quartz.ag-row.down-row.ag-row{
-  border-left: 4px solid #e74c3c !important;
-}
-
-.ag-theme-quartz.ag-row.row-default.ag-row{
-  border-left: 4px solid #bdc3c7 !important;
-}

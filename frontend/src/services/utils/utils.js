@@ -101,24 +101,3 @@ export function badgeContainer(value) {
   return container;
 }
 
-export function getRowStyleByStatus(params) {
-  const status = stringifyStatusValue(params.data?.status);
-
-  switch (status) {
-    case 1:
-      return { borderLeft: "4px solid #27ae60", backgroundColor: "#f6fffa" }; // vert clair
-    case 0:
-      return { borderLeft: "4px solid #e74c3c", backgroundColor: "#fff6f6" }; // rouge clair
-    case "RESOLVED":
-      return { borderLeft: "4px solid #e67e22", backgroundColor: "#fffaf5" }; // orange clair
-    case "OPEN":
-      return { borderLeft: "4px solid #3498db", backgroundColor: "#f5faff" }; // bleu clair
-    case "ASSIGNED":
-      return { borderLeft: "4px solid #6366f1", backgroundColor: "#f8f7ff" }; // violet clair
-    default:
-      return { borderLeft: "4px solid #bdc3c7" }; // gris par défaut
-  }
-}
-
-
-

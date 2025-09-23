@@ -11,6 +11,7 @@
       suppressCellFocus="true"
       :pagination="pagination"
       :paginationPageSize="pageSize"
+      :rowClassRules="rowClassRules"
       @grid-ready="onGridReady"
     />
   </div>
@@ -53,6 +54,9 @@
     filterModel: {
       type: Object,
       default: null
+    },
+    rowClassRules: {
+      type: Object,
     }
   });
 

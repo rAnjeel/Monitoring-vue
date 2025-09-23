@@ -1,0 +1,11 @@
+.ag-theme-quartz .ag-row.up-row{
+  border-left: 6px solid #27ae60 !important;
+}
+
+.ag-theme-quartz .ag-row.down-row{
+  border-left: 6px solid #e74c3c !important;
+}
+
+.ag-theme-quartz .ag-row.row-default{
+  border-left: 6px solid #fafafa !important;
+}

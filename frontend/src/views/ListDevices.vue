@@ -78,7 +78,7 @@
                 :pagination="true"
                 :page-size="pageSize"
                 :filter-model="gridFilterModel"
-                :getRowClass="rowClassRules"
+                :row-class-rules="rowClassRules"
                 ref="agGridRef"
                 @pagination-changed="onPaginationChanged"
             />
@@ -91,6 +91,7 @@
     import CsvImport from '@/views/CsvImport.vue';
     import '@/assets/ListDevices.css';
     import '@/assets/Loading.css';
+    import '@/assets/AgGrid.css';
     import CardNavbar from '@/components/CardNavbar.vue';
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, watch, computed } from 'vue';
@@ -118,12 +119,11 @@
     const totalTypes = computed(() => customDevices.value?.length || 0);
     const totalDevices = computed(() => (customDevices.value || []).reduce((sum, t) => sum + (Number(t.value) || 0), 0));
 
-    const rowClassRules = (params) => {
-    console.log("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQJJJJJJJJJJJJJJJJJJJJJJJJ")
-    if (stringifyStatusValue(params.data?.status) === 'UP') return 'up-row'
-    if (stringifyStatusValue(params.data?.status) === 'DOWN') return 'down-row'
-    return ''
-    }
+    const rowClassRules = {
+    'up-row': params => params.data?.ping_status == 1,
+    'down-row': params => params.data?.ping_status == 0,
+    'row-default': params => params.data?.ping_status === null
+    };
 
 
     // Load data
@@ -135,7 +135,7 @@
             const data = await getDevices();
             const devices = Array.isArray(data) ? data : (data && data.data ? data.data : []);
 
-            const columnsToHide = ['id', 'hostname', 'sysName', 'sysname', 'status', 'uptime'];
+            const columnsToHide = ['id', 'hostname', 'sysName', 'sysname', 'status', 'uptime', 'ping_status'];
 
             if (!Array.isArray(devices)) {
                 throw new Error('Réponse inattendue du service devices');
