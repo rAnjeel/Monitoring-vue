@@ -189,7 +189,7 @@
                         },
                         cellRenderer: (params) => {
                             const value = stringifyStatusValue(params.data?.status);
-                            return badgeContainer(value)
+                            return badgeContainer(value);
                         }
                     }
                 ];

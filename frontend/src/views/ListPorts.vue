@@ -75,7 +75,7 @@
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, computed } from 'vue';
     import { getPorts } from '@/services/ports/ports';
-    import { superposeValue} from '@/services/utils/utils';
+    import { badgeContainer, superposeValue} from '@/services/utils/utils';
 
 
     const loading = ref(false);
@@ -120,24 +120,34 @@
             const hasHostOrSys = keys.includes('hostname') || keys.includes('sysName') || keys.includes('sysname');
 
             if (hasHostOrSys) {
-                const deviceCol = {
-                    headerName: 'DEVICE',
-                    colId: 'device',
-                    wrapText: true,
-                    autoHeight: true,
-                    minWidth: 220,
-                    valueGetter: (params) => {
-                        const hostname = params.data?.hostname || '';
-                        const sysName = params.data?.sysName || params.data?.sysname || '';
-                        return [hostname, sysName].filter(Boolean).join(' ');
+                const deviceCol = [ 
+                    {
+                        headerName: 'DEVICE',
+                        colId: 'device',
+                        wrapText: true,
+                        autoHeight: true,
+                        minWidth: 220,
+                        valueGetter: (params) => {
+                            const hostname = params.data?.hostname || '';
+                            const sysName = params.data?.sysName || params.data?.sysname || '';
+                            return [hostname, sysName].filter(Boolean).join(' ');
+                        },
+                        cellRenderer: (params) => {
+                            const hostname = params.data?.hostname || '';
+                            const sysName = params.data?.sysName || params.data?.sysname || '';
+                            return superposeValue(hostname, sysName);
+                        }
                     },
-                    cellRenderer: (params) => {
-                        const hostname = params.data?.hostname || '';
-                        const sysName = params.data?.sysName || params.data?.sysname || '';
-                        return superposeValue(hostname, sysName);
+                    {
+                        headerName: 'ADMIN STATUS',
+                        colId: 'adminStatus',
+                        cellRenderer: (params) => {
+                            const value = params.data?.adminStatus;
+                            return badgeContainer(value.toUpperCase());
+                        }
                     }
-                };
-                columns.value = [deviceCol, ...otherColumns];
+                ];
+                columns.value = [...deviceCol, ...otherColumns];
             } else {
                 columns.value = otherColumns;
             }
