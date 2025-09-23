@@ -58,7 +58,6 @@
             <AgGridModule
                 :column-defs="columns"
                 :row-data="rows"
-                :row-selection="{ mode: 'multiRow' }"
                 :pagination="true"
                 :page-size="pageSize"
                 ref="agGridRef"

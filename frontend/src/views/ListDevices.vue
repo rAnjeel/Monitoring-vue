@@ -75,10 +75,10 @@
             <AgGridModule
                 :column-defs="columns"
                 :row-data="rows"
-                :row-selection="{ mode: 'multiRow' }"
                 :pagination="true"
                 :page-size="pageSize"
                 :filter-model="gridFilterModel"
+                :getRowClass="rowClassRules"
                 ref="agGridRef"
                 @pagination-changed="onPaginationChanged"
             />
@@ -118,6 +118,14 @@
     const totalTypes = computed(() => customDevices.value?.length || 0);
     const totalDevices = computed(() => (customDevices.value || []).reduce((sum, t) => sum + (Number(t.value) || 0), 0));
 
+    const rowClassRules = (params) => {
+    console.log("QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQJJJJJJJJJJJJJJJJJJJJJJJJ")
+    if (stringifyStatusValue(params.data?.status) === 'UP') return 'up-row'
+    if (stringifyStatusValue(params.data?.status) === 'DOWN') return 'down-row'
+    return ''
+    }
+
+
     // Load data
     async function loadDevices() {
         loading.value = true;
@@ -127,7 +135,7 @@
             const data = await getDevices();
             const devices = Array.isArray(data) ? data : (data && data.data ? data.data : []);
 
-            const columnsToHide = ['id', 'hostname', 'sysName', 'sysname'];
+            const columnsToHide = ['id', 'hostname', 'sysName', 'sysname', 'status', 'uptime'];
 
             if (!Array.isArray(devices)) {
                 throw new Error('Réponse inattendue du service devices');
@@ -292,7 +300,7 @@
         totalPagesDisplay.value = totalPages > 0 ? totalPages : 1;
         targetPage.value = currentPage > 0 ? currentPage : 1;
     }
-
+    
     onMounted(async () => {
         console.log('CardNavbar ref:', deviceNav.value);
         await loadDevices();
