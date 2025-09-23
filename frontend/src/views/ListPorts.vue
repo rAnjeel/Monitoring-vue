@@ -76,6 +76,8 @@
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, computed } from 'vue';
     import { getPorts } from '@/services/ports/ports';
+    import { superposeValue} from '@/services/utils/utils';
+
 
     const loading = ref(false);
     const error = ref(null);
@@ -133,24 +135,7 @@
                     cellRenderer: (params) => {
                         const hostname = params.data?.hostname || '';
                         const sysName = params.data?.sysName || params.data?.sysname || '';
-                        const container = document.createElement('div');
-                        container.style.display = 'flex';
-                        container.style.flexDirection = 'column';
-                        container.style.justifyContent = 'center';
-                        container.style.lineHeight = '1.2';
-                        const line1 = document.createElement('div');
-                        line1.style.fontWeight = '600';
-                        line1.style.color = '#2c3e50';
-                        line1.textContent = hostname || sysName || '';
-                        container.appendChild(line1);
-                        if (hostname && sysName && hostname !== sysName) {
-                            const line2 = document.createElement('div');
-                            line2.style.fontSize = '12px';
-                            line2.style.color = '#7f8c8d';
-                            line2.textContent = sysName;
-                            container.appendChild(line2);
-                        }
-                        return container;
+                        return superposeValue(hostname, sysName);
                     }
                 };
                 columns.value = [deviceCol, ...otherColumns];

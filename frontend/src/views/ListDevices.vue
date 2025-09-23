@@ -96,7 +96,8 @@
     import { ref, onMounted, watch, computed } from 'vue';
     import { getDevices } from '@/services/devices/devices';
     import { getTypeDevices } from '@/services/type devices/typeDevices';   
-    
+    import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
+
     const customDevices = ref([]);
     const deviceNav = ref(null);
     const selectedDevice = ref(null);
@@ -146,41 +147,45 @@
             const hasHostOrSys = keys.includes('hostname') || keys.includes('sysName') || keys.includes('sysname');
 
             if (hasHostOrSys) {
-                const deviceCol = {
-                    headerName: 'DEVICE',
-                    colId: 'device',
-                    wrapText: true,
-                    autoHeight: true,
-                    minWidth: 220,
-                    valueGetter: (params) => {
-                        const hostname = params.data?.hostname || '';
-                        const sysName = params.data?.sysName || params.data?.sysname || '';
-                        return [hostname, sysName].filter(Boolean).join(' ');
-                    },
-                    cellRenderer: (params) => {
-                        const hostname = params.data?.hostname || '';
-                        const sysName = params.data?.sysName || params.data?.sysname || '';
-                        const container = document.createElement('div');
-                        container.style.display = 'flex';
-                        container.style.flexDirection = 'column';
-                        container.style.justifyContent = 'center';
-                        container.style.lineHeight = '1.2';
-                        const line1 = document.createElement('div');
-                        line1.style.fontWeight = '600';
-                        line1.style.color = '#2c3e50';
-                        line1.textContent = hostname || sysName || '';
-                        container.appendChild(line1);
-                        if (hostname && sysName && hostname !== sysName) {
-                            const line2 = document.createElement('div');
-                            line2.style.fontSize = '12px';
-                            line2.style.color = '#7f8c8d';
-                            line2.textContent = sysName;
-                            container.appendChild(line2);
+                const deviceCol = [
+                    {
+                        headerName: 'DEVICE',
+                        colId: 'device',
+                        wrapText: true,
+                        autoHeight: true,
+                        minWidth: 220,
+                        valueGetter: (params) => {
+                            const hostname = params.data?.hostname || '';
+                            const sysName = params.data?.sysName || params.data?.sysname || '';
+                            return [hostname, sysName].filter(Boolean).join(' ');
+                        },
+                        cellRenderer: (params) => {
+                            const hostname = params.data?.hostname || '';
+                            const sysName = params.data?.sysName || params.data?.sysname || '';
+                            return superposeValue(hostname, sysName);
+                        }    
+                    }, 
+                    {
+                        headerName: 'UPTIME',
+                        colId: 'uptime',
+                        valueGetter: (params) => {
+                            if (!params.data?.uptime) return '';
+                            return formatDate(params.data?.uptime, 'YYYY-MM-DD HH:mm:ss');
                         }
-                        return container;
+                    },
+                    {
+                        headerName: 'STATUS',
+                        colId: 'status',
+                        valueGetter: (params) => {
+                            return stringifyStatusValue(params.data?.status);
+                        },
+                        cellRenderer: (params) => {
+                            const value = stringifyStatusValue(params.data?.status);
+                            return badgeContainer(value)
+                        }
                     }
-                };
-                columns.value = [deviceCol, ...otherColumns];
+                ];
+                columns.value = [...deviceCol, ...otherColumns];
             } else {
                 columns.value = otherColumns;
             }

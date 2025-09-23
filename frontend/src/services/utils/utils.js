@@ -1,13 +1,124 @@
-// utils/dateFormatter.js
-import dayjs from "dayjs";
+import { format, parseISO } from 'date-fns'
+import { fr } from 'date-fns/locale/fr'
+import { enUS } from 'date-fns/locale/en-US'
 
-/**
- * Formate une date avec Day.js
- * @param {string|Date} date - La date à formater
- * @param {string} format - Le format souhaité (ex: "DD/MM/YYYY HH:mm")
- * @returns {string} Date formatée
- */
-export function formatDate(date, format = "DD/MM/YYYY") {
-  if (!date) return "";
-  return dayjs(date).format(format);
+// Configuration des formats par pays
+const countryFormats = {
+  FR: {
+    locale: fr,
+    pattern: 'dd/MM/yyyy HH:mm:ss' 
+  },
+  US: {
+    locale: enUS,
+    pattern: 'MM/dd/yyyy h:mm:ss a' 
+  },
 }
+
+// Fonction principale
+export function formatDate(date, country = 'FR', customPattern) {
+  const config = countryFormats[country] || countryFormats.FR
+  const dateObj = typeof date === 'string' ? parseISO(date) : date
+  
+  return format(dateObj, customPattern || config.pattern, { 
+    locale: config.locale 
+  })
+}
+
+// Fonctions dédiées par pays
+export function formatDateFR(date, pattern) {
+  return formatDate(date, 'FR', pattern)
+}
+
+export function formatDateUS(date, pattern) {
+  return formatDate(date, 'US', pattern)
+}
+
+export function stringifyStatusValue(value) {
+  if(value == 1) {
+    return 'UP';
+  }  
+  if(value == 0) {
+    return 'DOWN';
+  }
+}
+
+export function superposeValue(valueOnside, valueBeside) {
+  const container = document.createElement('div');
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.justifyContent = 'center';
+  container.style.lineHeight = '1.2';
+  const line1 = document.createElement('div');
+  line1.style.fontWeight = '600';
+  line1.style.color = '#2c3e50';
+  line1.textContent = valueOnside || valueBeside || '';
+  container.appendChild(line1);
+  if (valueOnside && valueBeside && valueOnside !== valueBeside) {
+      const line2 = document.createElement('div');
+      line2.style.fontSize = '12px';
+      line2.style.color = '#7f8c8d';
+      line2.textContent = valueBeside;
+      container.appendChild(line2);
+  }
+  return container;
+}
+
+export function badgeContainer(value) {
+  const container = document.createElement("span");
+  container.style.padding = "2px 8px";
+  container.style.borderRadius = "12px";
+  container.style.fontSize = "12px";
+  container.style.fontWeight = "600";
+  container.style.textTransform = "uppercase";
+
+  switch (value) {
+      case "RESOLVED":
+          container.style.backgroundColor = "#ffe9d5";
+          container.style.color = "#e67e22";
+          break;
+      case "OPEN":
+          container.style.backgroundColor = "#e8f4ff";
+          container.style.color = "#3498db";
+          break;
+      case "ASSIGNED":
+          container.style.backgroundColor = "#eef2ff";
+          container.style.color = "#6366f1";
+          break;
+      case "UP":
+          container.style.backgroundColor = "#e3fcec";
+          container.style.color = "#27ae60";
+          break;
+      case "DOWN":
+          container.style.backgroundColor = "#fdecea";
+          container.style.color = "#e74c3c";
+          break;
+      default:
+          container.style.backgroundColor = "#ecf0f1";
+          container.style.color = "#7f8c8d";
+  }
+
+  container.textContent = value;
+  return container;
+}
+
+export function getRowStyleByStatus(params) {
+  const status = stringifyStatusValue(params.data?.status);
+
+  switch (status) {
+    case 1:
+      return { borderLeft: "4px solid #27ae60", backgroundColor: "#f6fffa" }; // vert clair
+    case 0:
+      return { borderLeft: "4px solid #e74c3c", backgroundColor: "#fff6f6" }; // rouge clair
+    case "RESOLVED":
+      return { borderLeft: "4px solid #e67e22", backgroundColor: "#fffaf5" }; // orange clair
+    case "OPEN":
+      return { borderLeft: "4px solid #3498db", backgroundColor: "#f5faff" }; // bleu clair
+    case "ASSIGNED":
+      return { borderLeft: "4px solid #6366f1", backgroundColor: "#f8f7ff" }; // violet clair
+    default:
+      return { borderLeft: "4px solid #bdc3c7" }; // gris par défaut
+  }
+}
+
+
+
