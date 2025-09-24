@@ -23,6 +23,39 @@ export async function getDevices() {
   }
 }
 
+export async function getLimitedDevices({ page = 1, pageSize = 20 } = {}) {
+  try {
+    console.log("page = ",page, "pageSize = ",pageSize);
+    const response = await api.get('/devices/limit', {
+      params: { page, pageSize }
+    });
+    // Comptage
+    const rowsCount = Array.isArray(response.data.rows) ? response.data.rows.length : 0;
+    const totalCount =
+      response.data.totalCountRes?.[0]?.count ??
+      response.data.totalCountRes?.count ??
+      0;
+
+    console.log('[GetDevices] Succès:', {
+      status: response.status,
+      rowsCount,
+      totalCount
+    });
+
+    return { 
+      rows: response.data.rows || [], 
+      totalCount 
+    };
+  } catch (error) {
+    const jsonErrorMessage = error && error.response && error.response.data
+      ? (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data))
+      : null
+    const message = jsonErrorMessage || error.message || 'Erreur inconnue'
+    console.error('[GetDevices] Erreur lors de la récupération:', message)
+    throw new Error(`Impossible de charger les devices: ${message}`)
+  }
+}
+
 export async function getDevice(id) {
   return api.get(`/devices/${id}`)
 }

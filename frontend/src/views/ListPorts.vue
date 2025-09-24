@@ -100,7 +100,7 @@
             const data = await getPorts();
             const ports = Array.isArray(data) ? data : (data && data.data ? data.data : []);
             
-            const columnsToHide = ['ne_id', 'device_id', 'hostname', 'sysName', 'sysname'];
+            const columnsToHide = ['ne_id', 'device_id', 'hostname', 'sysName', 'sysname', 'adminStatus', 'operStatus'];
 
             if (!Array.isArray(ports)) {
                 throw new Error('Réponse inattendue du service ports');
@@ -145,7 +145,15 @@
                             const value = params.data?.adminStatus;
                             return badgeContainer(value.toUpperCase());
                         }
-                    }
+                    },
+                    {
+                        headerName: 'OPER STATUS',
+                        colId: 'operStatus',
+                        cellRenderer: (params) => {
+                            const value = params.data?.operStatus;
+                            return badgeContainer(value.toUpperCase());
+                        }
+                    },
                 ];
                 columns.value = [...deviceCol, ...otherColumns];
             } else {

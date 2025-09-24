@@ -1,11 +1,11 @@
 <template>
     <div class="sub-navbar">
         <div class="nav nav-tabs">
-            <h4 class="text-uppercase" style="color:#ecf0f1; gap:12px;">
+            <h5 class="text-uppercase" style="color:#ecf0f1; gap:12px;">
                 <span class="glyphicon glyphicon-triangle-right" aria-hidden="true" style="margin-right: 6px;"></span>
                 <span>Type Devices</span>
                 <span class="label label-primary" title="Nombre de types">{{ totalTypes }}</span>
-            </h4>
+            </h5>
         </div>
     </div>
     <CardNavbar
@@ -17,11 +17,11 @@
     />
     <div class="sub-navbar">
         <div class="nav nav-tabs">
-            <h4 class="text-uppercase" style="color: #ecf0f1; gap:12px;">
+            <h5 class="text-uppercase" style="color: #ecf0f1; gap:12px;">
                 <span class="glyphicon glyphicon-triangle-right" aria-hidden="true" style="margin-right: 6px;"></span>
                 <span>Devices list</span>
                 <span class="label label-primary" title="Total devices">{{ totalDevices }}</span>
-            </h4>
+            </h5>
         </div>
     </div>
 
@@ -78,10 +78,14 @@
                 :pagination="true"
                 :page-size="pageSize"
                 :filter-model="gridFilterModel"
+                :total-pages="totalPagesDisplay"
                 :row-class-rules="rowClassRules"
                 ref="agGridRef"
                 @pagination-changed="onPaginationChanged"
             />
+        </div>
+        <div class="pagination-info">
+            Total de pages : {{ totalPagesDisplay }}
         </div>
     </div>
     <CsvImport v-model="showImportDevices" :import-type="'devices'" @import="reloadGrid" />
@@ -95,7 +99,7 @@
     import CardNavbar from '@/components/CardNavbar.vue';
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, watch, computed } from 'vue';
-    import { getDevices } from '@/services/devices/devices';
+    import { getLimitedDevices } from '@/services/devices/devices';
     import { getTypeDevices } from '@/services/type devices/typeDevices';   
     import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
 
@@ -132,10 +136,19 @@
         error.value = null;
         try {
             console.log('[LoadDevices] Début du chargement des devices...');
-            const data = await getDevices();
+            // const data = await getLimitedDevices( page, pageSize);
+            console.log('Page: ', getPage(), 'Page size:', pageSize.value)
+            const { rows: data, totalCount: fetchedTotalCount } = await getLimitedDevices({ 
+                page: getPage(), 
+                pageSize: pageSize.value, 
+            });
+            console.log('Total devices:', fetchedTotalCount)
+
+            // Update the component's state
+            totalPagesDisplay.value = Math.ceil(fetchedTotalCount / pageSize.value);
             const devices = Array.isArray(data) ? data : (data && data.data ? data.data : []);
 
-            const columnsToHide = ['id', 'hostname', 'sysName', 'sysname', 'status', 'uptime', 'ping_status'];
+            const columnsToHide = ['id', 'hostname', 'sysName', 'status', 'uptime', 'ping_status', 'device_id', 'snmp_disable', 'community', 'authlevel', 'authname', 'authalgo', 'cryptopass', 'cryptoalgo', 'snmpver'];
 
             if (!Array.isArray(devices)) {
                 throw new Error('Réponse inattendue du service devices');
@@ -161,7 +174,7 @@
                         colId: 'device',
                         wrapText: true,
                         autoHeight: true,
-                        minWidth: 220,
+                        minWidth: 200,
                         valueGetter: (params) => {
                             const hostname = params.data?.hostname || '';
                             const sysName = params.data?.sysName || params.data?.sysname || '';
@@ -176,6 +189,8 @@
                     {
                         headerName: 'UPTIME',
                         colId: 'uptime',
+                        width: 180,
+                        minWidth: 180,
                         valueGetter: (params) => {
                             if (!params.data?.uptime) return '';
                             return formatDate(params.data?.uptime, 'YYYY-MM-DD HH:mm:ss');
@@ -183,12 +198,15 @@
                     },
                     {
                         headerName: 'STATUS',
-                        colId: 'status',
+                        colId: 'ping_status',
+                        autoHeight: true,
+                        width: 120,
+                        minWidth: 120,
                         valueGetter: (params) => {
-                            return stringifyStatusValue(params.data?.status);
+                            return stringifyStatusValue(params.data?.ping_status);
                         },
                         cellRenderer: (params) => {
-                            const value = stringifyStatusValue(params.data?.status);
+                            const value = stringifyStatusValue(params.data?.ping_status);
                             return badgeContainer(value);
                         }
                     }
@@ -296,6 +314,13 @@
         }
     }
 
+    function getPage() {
+        if (agGridRef.value) {
+            return agGridRef.value.getCurrentPage();
+        }
+        return null; 
+    }
+
     function onPaginationChanged({ totalPages, currentPage }) {
         totalPagesDisplay.value = totalPages > 0 ? totalPages : 1;
         targetPage.value = currentPage > 0 ? currentPage : 1;
@@ -305,6 +330,7 @@
         console.log('CardNavbar ref:', deviceNav.value);
         await loadDevices();
         await loadTypeDevices();
+        console.log ('Page actuel', getPage())
     });
 
     // Watch pour réinitialiser le filtre si pas de device sélectionné
@@ -312,6 +338,12 @@
         if (!newDevice) {
             gridFilterModel.value = null;
         }
+    });
+
+    watch([() => targetPage.value, () => pageSize.value], async () => {
+     // Rechargez les données si la page ou la taille de page change
+        await loadDevices();
+        console.log ('Page actuel', getPage());
     });
     
 </script>

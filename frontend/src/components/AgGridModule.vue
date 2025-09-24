@@ -15,6 +15,9 @@
       @grid-ready="onGridReady"
     />
   </div>
+  <div class="pagination-info">
+    Total de pages : {{ totalPages }}
+  </div>
 </template>
 
 <script setup>
@@ -43,6 +46,10 @@
       type: Boolean,
       default: true
     },
+    pageTotal: {
+      type: Number,
+      default: 1
+    },
     pageSize: {
       type: Number,
       default: 20
@@ -67,6 +74,7 @@
   };
 
   const gridApi = ref(null);
+
   function onGridReady(params) {
     gridApi.value = params.api;
     if (props.quickFilterText) {
@@ -77,16 +85,17 @@
     }
     // Fire initial pagination info
     try {
-      const total = params.api.paginationGetTotalPages ? params.api.paginationGetTotalPages() : 0;
+      const total = props.pageTotal;
       const current = params.api.paginationGetCurrentPage ? (params.api.paginationGetCurrentPage() + 1) : 1;
       emit('pagination-changed', { totalPages: total, currentPage: current });
     } catch (e) {
       console.warn('[AgGridModule] pagination init error', e);
     }
+
     // Listen to pagination changes
     if (params.api && params.api.addEventListener) {
       params.api.addEventListener('paginationChanged', () => {
-        const total = params.api.paginationGetTotalPages ? params.api.paginationGetTotalPages() : 0;
+        const total = props.pageTotal;
         const current = params.api.paginationGetCurrentPage ? (params.api.paginationGetCurrentPage() + 1) : 1;
         emit('pagination-changed', { totalPages: total, currentPage: current });
       });
@@ -116,6 +125,12 @@
       if (gridApi.value && gridApi.value.paginationGoToPage) {
         gridApi.value.paginationGoToPage(pageIndex);
       }
+    },
+    getCurrentPage: () => {
+      if (gridApi.value) {
+        return gridApi.value.paginationGetCurrentPage() + 1;
+      }
+      return 1;
     }
   });
 </script>
