@@ -2,7 +2,7 @@
   <div class="ag-grid-module">
     <ag-grid-vue
       class="ag-theme-quartz"
-      style="width: 100%; height: 500px;"
+      :id="gridId"
       :columnDefs="columnDefs"
       :rowData="rowData"
       :defaultColDef="defaultColDef"
@@ -23,6 +23,10 @@ import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 const props = defineProps({
+  gridId: {
+    type: String,
+    default: null
+  },
   rowData: {
     type: Array,
     default: () => []

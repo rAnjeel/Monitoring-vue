@@ -73,6 +73,7 @@
 
         <div class="app-container">
             <AgGridModule
+                grid-id="devices-grid"
                 :column-defs="columns"
                 :row-data="rows"
                 :filter-model="gridFilterModel"

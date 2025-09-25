@@ -48,20 +48,18 @@
         </div>
 
         <!-- Loading overlay -->
-        <div v-if="loading" class="loading-overlay">
+        <!-- <div v-if="loading" class="loading-overlay">
           <div class="loading-box">
             <span class="glyphicon glyphicon-refresh spinning" style="font-size:24px; margin-right:8px;"></span>
             <span>Loading...</span>
           </div>
-        </div>
+        </div> -->
         <div class="app-container">
             <AgGridModule
+                grid-id="ports-grid"
                 :column-defs="columns"
                 :row-data="rows"
-                :pagination="true"
-                :page-size="pageSize"
                 ref="agGridRef"
-                @pagination-changed="onPaginationChanged"
             />
         </div>
     </div>
@@ -70,11 +68,11 @@
 
 <script setup>
     import CsvImport from '@/views/CsvImport.vue';
-    import '@/assets/ListDevices.css';
+    import '@/assets/ListPorts.css';
     import '@/assets/Loading.css';
     import AgGridModule from '@/components/AgGridModule.vue';
-    import { ref, onMounted, computed } from 'vue';
-    import { getPorts } from '@/services/ports/ports';
+    import { ref, onMounted, computed, watch } from 'vue';
+    import { getLimitedPorts } from '@/services/ports/ports';
     import { badgeContainer, superposeValue} from '@/services/utils/utils';
 
 
@@ -93,12 +91,15 @@
 
 
     async function loadPorts() {
-        loading.value = true;
+        // loading.value = true;
         error.value = null;
         try {
             console.log('[LoadPorts] Début du chargement des ports...');
-            const data = await getPorts();
-            const ports = Array.isArray(data) ? data : (data && data.data ? data.data : []);
+            const { rows: ports, totalCount: fetchedTotalCount } = await getLimitedPorts({
+                page: targetPage.value,
+                pageSize: pageSize.value
+            });
+            totalPagesDisplay.value = Math.ceil(fetchedTotalCount / pageSize.value);
             
             const columnsToHide = ['ne_id', 'device_id', 'hostname', 'sysName', 'sysname', 'adminStatus', 'operStatus'];
 
@@ -175,24 +176,20 @@
         await loadPorts();
     }
 
-    function onPaginationChanged({ totalPages, currentPage }) {
-        totalPagesDisplay.value = totalPages > 0 ? totalPages : 1;
-        targetPage.value = currentPage > 0 ? currentPage : 1;
-    }
-
     function jumpToPage() {
-        const api = agGridRef.value;
         const total = Number(totalPagesDisplay.value) || 1;
         let page = Number(targetPage.value) || 1;
         if (page < 1) page = 1;
         if (page > total) page = total;
         targetPage.value = page;
-        if (api && api.goToPage) {
-            api.goToPage(page - 1);
-        }
     }
 
     onMounted(async () => {
+        await loadPorts();
+    });
+
+    watch([() => targetPage.value, () => pageSize.value], async () => {
+     // Rechargez les données si la page ou la taille de page change
         await loadPorts();
     });
 
