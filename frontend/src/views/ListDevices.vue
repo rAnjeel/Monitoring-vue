@@ -64,28 +64,21 @@
         </div>
 
         <!-- Loading overlay -->
-        <div v-if="loading" class="loading-overlay">
+        <!-- <div v-if="loading" class="loading-overlay">
           <div class="loading-box">
             <span class="glyphicon glyphicon-refresh spinning" style="font-size:24px; margin-right:8px;"></span>
             <span>Loading...</span>
           </div>
-        </div>
+        </div> -->
 
         <div class="app-container">
             <AgGridModule
                 :column-defs="columns"
                 :row-data="rows"
-                :pagination="true"
-                :page-size="pageSize"
                 :filter-model="gridFilterModel"
-                :total-pages="totalPagesDisplay"
                 :row-class-rules="rowClassRules"
                 ref="agGridRef"
-                @pagination-changed="onPaginationChanged"
             />
-        </div>
-        <div class="pagination-info">
-            Total de pages : {{ totalPagesDisplay }}
         </div>
     </div>
     <CsvImport v-model="showImportDevices" :import-type="'devices'" @import="reloadGrid" />
@@ -132,14 +125,12 @@
 
     // Load data
     async function loadDevices() {
-        loading.value = true;
+        // loading.value = true;
         error.value = null;
         try {
             console.log('[LoadDevices] Début du chargement des devices...');
-            // const data = await getLimitedDevices( page, pageSize);
-            console.log('Page: ', getPage(), 'Page size:', pageSize.value)
             const { rows: data, totalCount: fetchedTotalCount } = await getLimitedDevices({ 
-                page: getPage(), 
+                page: targetPage.value, 
                 pageSize: pageSize.value, 
             });
             console.log('Total devices:', fetchedTotalCount)
@@ -303,34 +294,21 @@
     }
 
     function jumpToPage() {
-        const api = agGridRef.value;
         const total = Number(totalPagesDisplay.value) || 1;
+        console.log("TOTAL :", total);
         let page = Number(targetPage.value) || 1;
+        console.log("page :", page);
         if (page < 1) page = 1;
         if (page > total) page = total;
         targetPage.value = page;
-        if (api && api.goToPage) {
-            api.goToPage(page - 1);
-        }
+        // loadDevices();
     }
 
-    function getPage() {
-        if (agGridRef.value) {
-            return agGridRef.value.getCurrentPage();
-        }
-        return null; 
-    }
-
-    function onPaginationChanged({ totalPages, currentPage }) {
-        totalPagesDisplay.value = totalPages > 0 ? totalPages : 1;
-        targetPage.value = currentPage > 0 ? currentPage : 1;
-    }
     
     onMounted(async () => {
         console.log('CardNavbar ref:', deviceNav.value);
         await loadDevices();
         await loadTypeDevices();
-        console.log ('Page actuel', getPage())
     });
 
     // Watch pour réinitialiser le filtre si pas de device sélectionné
@@ -343,11 +321,6 @@
     watch([() => targetPage.value, () => pageSize.value], async () => {
      // Rechargez les données si la page ou la taille de page change
         await loadDevices();
-        console.log ('Page actuel', getPage());
     });
     
 </script>
-
-<style scoped>
-
-</style>
