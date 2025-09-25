@@ -20,7 +20,7 @@
             <h5 class="text-uppercase" style="color: #ecf0f1; gap:12px;">
                 <span class="glyphicon glyphicon-triangle-right" aria-hidden="true" style="margin-right: 6px;"></span>
                 <span>Devices list</span>
-                <span class="label label-primary" title="Total devices">{{ totalDevices }}</span>
+                <span class="label label-primary" title="Total devices">{{ totalPagesDisplay }}</span>
             </h5>
         </div>
     </div>
@@ -79,6 +79,7 @@
                 :filter-model="gridFilterModel"
                 :row-class-rules="rowClassRules"
                 ref="agGridRef"
+                @filter-changed="onFilterChanged"
             />
         </div>
     </div>
@@ -93,7 +94,7 @@
     import CardNavbar from '@/components/CardNavbar.vue';
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, watch, computed } from 'vue';
-    import { getLimitedDevices } from '@/services/devices/devices';
+    import { getLimitedDevices, getDevices } from '@/services/devices/devices';
     import { getTypeDevices } from '@/services/type devices/typeDevices';   
     import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
 
@@ -115,7 +116,6 @@
 
     // UX counters for cards header
     const totalTypes = computed(() => customDevices.value?.length || 0);
-    const totalDevices = computed(() => (customDevices.value || []).reduce((sum, t) => sum + (Number(t.value) || 0), 0));
 
     const rowClassRules = {
     'up-row': params => params.data?.ping_status == 1,
@@ -218,6 +218,97 @@
         }
     }
 
+    async function loadFilteredDevices() {
+        error.value = null;
+        try {
+            console.log('[LoadFilteredDevices] Début du chargement filtré des devices...', gridFilterModel.value);
+
+            // Appel à ton service getDevices avec { filter }
+            const data = await getDevices({ filter: gridFilterModel.value });
+
+            const devices = Array.isArray(data) 
+                ? data 
+                : (data && data.data ? data.data : []);
+
+            if (!Array.isArray(devices)) {
+                throw new Error('Réponse inattendue du service getDevices');
+            }
+
+            // Génération des colonnes dynamiques comme dans loadDevices
+            const columnsToHide = ['id', 'hostname', 'sysName', 'status', 'uptime', 'ping_status', 'device_id', 'snmp_disable', 'community', 'authlevel', 'authname', 'authalgo', 'cryptopass', 'cryptoalgo', 'snmpver'];
+
+            const sample = devices[0] || {};
+            const keys = Object.keys(sample || {});
+            const visibleKeys = keys.filter(key => !columnsToHide.includes(key));
+
+            const otherColumns = visibleKeys
+                .filter(key => !['hostname', 'sysName', 'sysname'].includes(key))
+                .map(key => ({
+                    headerName: key.replace(/_/g, ' ').toUpperCase(),
+                    field: key
+                }));
+
+            const hasHostOrSys = keys.includes('hostname') || keys.includes('sysName') || keys.includes('sysname');
+
+            if (hasHostOrSys) {
+                const deviceCol = [
+                    {
+                        headerName: 'DEVICE',
+                        colId: 'device',
+                        wrapText: true,
+                        autoHeight: true,
+                        minWidth: 200,
+                        valueGetter: (params) => {
+                            const hostname = params.data?.hostname || '';
+                            const sysName = params.data?.sysName || params.data?.sysname || '';
+                            return [hostname, sysName].filter(Boolean).join(' ');
+                        },
+                        cellRenderer: (params) => {
+                            const hostname = params.data?.hostname || '';
+                            const sysName = params.data?.sysName || params.data?.sysname || '';
+                            return superposeValue(hostname, sysName);
+                        }    
+                    }, 
+                    {
+                        headerName: 'UPTIME',
+                        colId: 'uptime',
+                        width: 180,
+                        minWidth: 180,
+                        valueGetter: (params) => {
+                            if (!params.data?.uptime) return '';
+                            return formatDate(params.data?.uptime, 'YYYY-MM-DD HH:mm:ss');
+                        }
+                    },
+                    {
+                        headerName: 'STATUS',
+                        colId: 'ping_status',
+                        autoHeight: true,
+                        width: 120,
+                        minWidth: 120,
+                        valueGetter: (params) => {
+                            return stringifyStatusValue(params.data?.ping_status);
+                        },
+                        cellRenderer: (params) => {
+                            const value = stringifyStatusValue(params.data?.ping_status);
+                            return badgeContainer(value);
+                        }
+                    }
+                ];
+                columns.value = [...deviceCol, ...otherColumns];
+            } else {
+                columns.value = otherColumns;
+            }
+
+            rows.value = devices;
+        } catch (err) {
+            error.value = err.message;
+            console.error('[LoadFilteredDevices] Erreur lors du chargement:', err);
+        } finally {
+            loading.value = false;
+            lastUpdated.value = new Date();
+        }
+    }
+
     async function loadTypeDevices() {
         loading.value = true;
         error.value = null;
@@ -286,6 +377,23 @@
     function handleNavigationChange(currentIndex, maxIndex) {
         console.log('Navigation:', currentIndex, '/', maxIndex);
     }
+
+    function onFilterChanged(filterModel) {
+        const filter = {};
+        for (const key in filterModel) {
+            const f = filterModel[key];
+            if (f.filter) {
+                // On stocke type + valeur → ton backend décidera quoi en faire
+                filter[key] = {
+                    type: f.type || 'equals',
+                    value: f.filter
+                };
+            }
+        }
+        gridFilterModel.value = filter;
+        loadFilteredDevices();
+    }
+
 
     // Bouton reload
     async function reloadGrid() {

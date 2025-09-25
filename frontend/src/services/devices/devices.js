@@ -4,10 +4,10 @@ const api = axios.create({
   baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000',
 })
 
-export async function getDevices() {
+export async function getDevices({filter = {}} = {}) {
   try {
     console.log('[GetDevices] Début de la récupération des devices...')
-    const response = await api.get('/devices/list')
+    const response = await api.get('/devices/list',{ params: { filter: JSON.stringify(filter) } })
     console.log('[GetDevices] Succès:', {
       status: response.status,
       count: Array.isArray(response.data) ? response.data.length : (response.data && response.data.data ? response.data.data.length : undefined)

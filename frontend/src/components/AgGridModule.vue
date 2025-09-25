@@ -11,17 +11,19 @@
       suppressCellFocus="true"
       :rowClassRules="rowClassRules"
       @grid-ready="onGridReady"
+      @filter-changed="onFilterChanged"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, defineProps, watch, defineExpose } from 'vue';
+import { ref, defineProps, watch, defineExpose, defineEmits } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
+const emit = defineEmits(['filter-changed']);
 const props = defineProps({
   gridId: {
     type: String,
@@ -84,8 +86,16 @@ watch(() => props.quickFilterText, (val) => {
 watch(() => props.filterModel, (val) => {
   if (gridApi.value) {
     gridApi.value.setFilterModel(val || null);
+    emit('filter-changed', gridApi.value.getFilterModel());
   }
 }, { deep: true });
+
+function onFilterChanged() {
+  if (gridApi.value) {
+    emit('filter-changed', gridApi.value.getFilterModel());
+  }
+}
+
 
 defineExpose({
   setQuickFilter: (val) => {
