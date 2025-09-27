@@ -6,9 +6,9 @@
       :columnDefs="columnDefs"
       :rowData="rowData"
       :defaultColDef="defaultColDef"
-      rowSelection="multiple"
+      :rowSelection="rowSelection"
       :rowMultiSelectWithClick="true"
-      suppressCellFocus="true"
+      :suppressCellFocus="suppressCellFocus"
       :rowClassRules="rowClassRules"
       @grid-ready="onGridReady"
       @filter-changed="onFilterChanged"
@@ -38,8 +38,8 @@ const props = defineProps({
     required: true
   },
   rowSelection: {
-    type: Object,
-    default: () => ({ mode: 'singleRow' })
+    type: [String, Object],
+    default: 'multiple'
   },
   pageSize: {
     type: Number,
@@ -55,6 +55,10 @@ const props = defineProps({
   },
   rowClassRules: {
     type: Object,
+  },
+  suppressCellFocus: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -72,9 +76,10 @@ function onGridReady(params) {
   if (props.quickFilterText) {
     gridApi.value.setQuickFilter(props.quickFilterText);
   }
-  if (props.filterModel) {
-    gridApi.value.setFilterModel(props.filterModel);
-  }
+  // Ne pas appliquer automatiquement le filterModel au démarrage
+  // if (props.filterModel) {
+  //   gridApi.value.setFilterModel(props.filterModel);
+  // }
 }
 
 watch(() => props.quickFilterText, (val) => {
@@ -85,8 +90,9 @@ watch(() => props.quickFilterText, (val) => {
 
 watch(() => props.filterModel, (val) => {
   if (gridApi.value) {
-    gridApi.value.setFilterModel(val || null);
-    emit('filter-changed', gridApi.value.getFilterModel());
+    // Ne pas appliquer automatiquement le filtre - laisser l'utilisateur contrôler
+    // gridApi.value.setFilterModel(val || null);
+    console.log('[AgGridModule] Filter model changed but not applied automatically:', val);
   }
 }, { deep: true });
 
@@ -107,6 +113,12 @@ defineExpose({
     if (gridApi.value) {
       gridApi.value.setFilterModel(val || null);
     }
+  },
+  getFilterModel: () => {
+    if (gridApi.value) {
+      return gridApi.value.getFilterModel();
+    }
+    return null;
   }
 });
 </script>

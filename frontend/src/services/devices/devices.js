@@ -6,8 +6,15 @@ const api = axios.create({
 
 export async function getDevices({filter = {}} = {}) {
   try {
-    console.log('[GetDevices] Début de la récupération des devices...')
-    const response = await api.get('/devices/list',{ params: { filter: JSON.stringify(filter) } })
+    console.log('[GetDevices] Début de la récupération des devices...', { filter })
+    
+    // Ne pas envoyer de paramètre filter si il est vide, null ou undefined
+    const params = {}
+    if (filter && Object.keys(filter).length > 0) {
+      params.filter = JSON.stringify(filter)
+    }
+    
+    const response = await api.get('/devices/list', { params })
     console.log('[GetDevices] Succès:', {
       status: response.status,
       count: Array.isArray(response.data) ? response.data.length : (response.data && response.data.data ? response.data.data.length : undefined)
