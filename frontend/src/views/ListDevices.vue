@@ -53,14 +53,6 @@
                     <span class="glyphicon glyphicon-upload"></span>
                     Import CSV
                     </button>
-                    <button @click="applyFilters" class="btn btn-sm btn-success" :disabled="loading" style="margin-right: 8px;">
-                    <span class="glyphicon glyphicon-filter"></span>
-                    Apply Filters
-                    </button>
-                    <button @click="clearFilters" class="btn btn-sm btn-warning" :disabled="loading" style="margin-right: 8px;">
-                    <span class="glyphicon glyphicon-remove"></span>
-                    Clear Filters
-                    </button>
                     <button @click="reloadGrid" class="btn btn-sm btn-info" :disabled="loading">
                     <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
                     Reload
@@ -81,13 +73,15 @@
 
         <div class="app-container">
             <AgGridModule
-                grid-id="devices-grid"
-                :column-defs="columns"
-                :row-data="rows"
-                :filter-model="gridFilterModel"
-                :row-class-rules="rowClassRules"
-                ref="agGridRef"
-                @filter-changed="onFilterChanged"
+            grid-id="devices-grid"
+            :column-defs="columns"
+            :row-data="rows"
+            :filter-model="gridFilterModel"
+            :row-class-rules="rowClassRules"
+            ref="agGridRef"
+            @filter-changed="onFilterChanged"
+            @filter-apply="applyFilters"
+            @filter-reset="clearFilters"
             />
         </div>
     </div>
@@ -133,89 +127,89 @@
 
     // Fonction réutilisable pour générer les colonnes
     function generateColumns(devices) {
-        const columnsToHide = ['id', 'hostname', 'sysName', 'status', 'uptime', 'ping_status', 'device_id', 'snmp_disable', 'community', 'authlevel', 'authname', 'authalgo', 'cryptopass', 'cryptoalgo', 'snmpver'];
+            const columnsToHide = ['id', 'hostname', 'sysName', 'status', 'uptime', 'ping_status', 'device_id', 'snmp_disable', 'community', 'authlevel', 'authname', 'authalgo', 'cryptopass', 'cryptoalgo', 'snmpver'];
 
-        const sample = devices[0] || {};
-        const keys = Object.keys(sample || {});
-        const visibleKeys = keys.filter(key => !columnsToHide.includes(key));
+            const sample = devices[0] || {};
+            const keys = Object.keys(sample || {});
+            const visibleKeys = keys.filter(key => !columnsToHide.includes(key));
 
-        const otherColumns = visibleKeys
-            .filter(key => !['hostname', 'sysName', 'sysname'].includes(key))
-            .map(key => ({
-                headerName: key.replace(/_/g, ' ').toUpperCase(),
+            const otherColumns = visibleKeys
+                .filter(key => !['hostname', 'sysName', 'sysname'].includes(key))
+                .map(key => ({
+                    headerName: key.replace(/_/g, ' ').toUpperCase(),
                 field: key,
                 filter: 'agTextColumnFilter',
                 filterParams: {
                     filterOptions: ['contains', 'startsWith', 'endsWith', 'equals'],
                     defaultOption: 'contains'
                 }
-            }));
+                }));
 
-        const hasHostOrSys = keys.includes('hostname') || keys.includes('sysName') || keys.includes('sysname');
+            const hasHostOrSys = keys.includes('hostname') || keys.includes('sysName') || keys.includes('sysname');
 
-        if (hasHostOrSys) {
-            const deviceCol = [
-                {
-                    headerName: 'DEVICE',
-                    colId: 'device',
-                    wrapText: true,
-                    autoHeight: true,
-                    minWidth: 200,
+            if (hasHostOrSys) {
+                const deviceCol = [
+                    {
+                        headerName: 'DEVICE',
+                        colId: 'device',
+                        wrapText: true,
+                        autoHeight: true,
+                        minWidth: 200,
                     filter: 'agTextColumnFilter',
                     filterParams: {
                         filterOptions: ['contains', 'startsWith', 'endsWith', 'equals'],
                         defaultOption: 'contains'
                     },
-                    valueGetter: (params) => {
-                        const hostname = params.data?.hostname || '';
-                        const sysName = params.data?.sysName || params.data?.sysname || '';
-                        return [hostname, sysName].filter(Boolean).join(' ');
-                    },
-                    cellRenderer: (params) => {
-                        const hostname = params.data?.hostname || '';
-                        const sysName = params.data?.sysName || params.data?.sysname || '';
-                        return superposeValue(hostname, sysName);
-                    }    
-                }, 
-                {
-                    headerName: 'UPTIME',
-                    colId: 'uptime',
-                    width: 180,
-                    minWidth: 180,
+                        valueGetter: (params) => {
+                            const hostname = params.data?.hostname || '';
+                            const sysName = params.data?.sysName || params.data?.sysname || '';
+                            return [hostname, sysName].filter(Boolean).join(' ');
+                        },
+                        cellRenderer: (params) => {
+                            const hostname = params.data?.hostname || '';
+                            const sysName = params.data?.sysName || params.data?.sysname || '';
+                            return superposeValue(hostname, sysName);
+                        }    
+                    }, 
+                    {
+                        headerName: 'UPTIME',
+                        colId: 'uptime',
+                        width: 180,
+                        minWidth: 180,
                     filter: 'agTextColumnFilter',
                     filterParams: {
                         filterOptions: ['contains', 'startsWith', 'endsWith', 'equals'],
                         defaultOption: 'contains'
                     },
-                    valueGetter: (params) => {
-                        if (!params.data?.uptime) return '';
-                        return formatDate(params.data?.uptime, 'YYYY-MM-DD HH:mm:ss');
+                        valueGetter: (params) => {
+                            if (!params.data?.uptime) return '';
+                            return formatDate(params.data?.uptime, 'YYYY-MM-DD HH:mm:ss');
+                        }
+                    },
+                    {
+                        headerName: 'STATUS',
+                        colId: 'ping_status',
+                        autoHeight: true,
+                        width: 120,
+                        minWidth: 120,
+                    filter: 'agTextColumnFilter',
+                    filterParams: {
+                        filterOptions: ['contains', 'startsWith', 'endsWith', 'equals'],
+                        defaultOption: 'contains'
+                    },
+                        valueGetter: (params) => {
+                            return stringifyStatusValue(params.data?.ping_status);
+                        },
+                        cellRenderer: (params) => {
+                            const value = stringifyStatusValue(params.data?.ping_status);
+                            return badgeContainer(value);
+                        }
                     }
-                },
-                {
-                    headerName: 'STATUS',
-                    colId: 'ping_status',
-                    autoHeight: true,
-                    width: 120,
-                    minWidth: 120,
-                    filter: 'agTextColumnFilter',
-                    filterParams: {
-                        filterOptions: ['contains', 'startsWith', 'endsWith', 'equals'],
-                        defaultOption: 'contains'
-                    },
-                    valueGetter: (params) => {
-                        return stringifyStatusValue(params.data?.ping_status);
-                    },
-                    cellRenderer: (params) => {
-                        const value = stringifyStatusValue(params.data?.ping_status);
-                        return badgeContainer(value);
-                    }
-                }
-            ];
-            columns.value = [...deviceCol, ...otherColumns];
-        } else {
-            columns.value = otherColumns;
-        }
+                ];
+                columns.value = [...deviceCol, ...otherColumns];
+            } else {
+                columns.value = otherColumns;
+            }
     }
 
 
