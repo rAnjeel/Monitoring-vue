@@ -20,7 +20,7 @@
             <h5 class="text-uppercase" style="color: #ecf0f1; gap:12px;">
                 <span class="glyphicon glyphicon-triangle-right" aria-hidden="true" style="margin-right: 6px;"></span>
                 <span>Devices list</span>
-                <span class="label label-primary" title="Total devices">{{ totalPagesDisplay }}</span>
+                <span class="label label-primary" title="Total devices">{{ totalCountDisplay }}</span>
             </h5>
         </div>
     </div>
@@ -114,6 +114,7 @@
     const agGridRef = ref(null);
     const targetPage = ref(1);
     const totalPagesDisplay = ref(1);
+    const totalCountDisplay = ref(0);
     const showImportDevices = ref(false);
 
     // UX counters for cards header
@@ -151,6 +152,7 @@
                 const deviceCol = [
                     {
                         headerName: 'DEVICE',
+                        field: 'hostname',
                         colId: 'device',
                         wrapText: true,
                         autoHeight: true,
@@ -232,7 +234,9 @@
             console.log('Total devices:', fetchedTotalCount)
 
             // Update the component's state
-            totalPagesDisplay.value = Math.ceil(fetchedTotalCount / pageSize.value);
+            totalCountDisplay.value = fetchedTotalCount;
+            totalPagesDisplay.value = Math.max(1, Math.ceil(fetchedTotalCount / pageSize.value));
+            console.log('Total pages display:', totalPagesDisplay.value);
             const devices = Array.isArray(data) ? data : (data && data.data ? data.data : []);
 
             if (!Array.isArray(devices)) {

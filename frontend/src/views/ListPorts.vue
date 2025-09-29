@@ -4,7 +4,7 @@
             <h4 class="text-uppercase" style="color:#ecf0f1;">
                 <span class="glyphicon glyphicon-triangle-right" aria-hidden="true" style="margin-right: 6px;"></span>
                 <span>Ports List</span>
-                <span class="label label-primary" title="Total ports">{{ totalPorts }}</span>
+                <span class="label label-primary" title="Total ports">{{ totalCountDisplay }}</span>
             </h4>
         </div>
     </div>
@@ -59,7 +59,11 @@
                 grid-id="ports-grid"
                 :column-defs="columns"
                 :row-data="rows"
+                :filter-model="gridFilterModel"
                 ref="agGridRef"
+                @filter-changed="onFilterChanged"
+                @filter-apply="applyFilters"
+                @filter-reset="clearFilters"
             />
         </div>
     </div>
@@ -71,7 +75,7 @@
     import '@/assets/ListPorts.css';
     import '@/assets/Loading.css';
     import AgGridModule from '@/components/AgGridModule.vue';
-    import { ref, onMounted, computed, watch } from 'vue';
+    import { ref, onMounted, watch } from 'vue';
     import { getLimitedPorts } from '@/services/ports/ports';
     import { badgeContainer, superposeValue} from '@/services/utils/utils';
 
@@ -84,10 +88,72 @@
     const rows = ref([]);
     const pageSize = ref(20);
     const agGridRef = ref(null);
+    const gridFilterModel = ref(null);
     const targetPage = ref(1);
     const totalPagesDisplay = ref(1);
-    const totalPorts = computed(() => Array.isArray(rows.value) ? rows.value.length : 0);
+    const totalCountDisplay = ref(0);
     const showImportPorts = ref(false);
+
+    // Générer dynamiquement les colonnes en s'inspirant de ListDevices.vue
+    function generateColumns(portsData) {
+        const columnsToHide = ['ne_id', 'device_id', 'hostname', 'sysName', 'sysname', 'adminStatus', 'operStatus', 'port_id', 'mtu', 'HighSpeed', 'PromiscuousMode', 'ConnectorPresent'];
+
+        const sample = (Array.isArray(portsData) && portsData.length > 0) ? portsData[0] : {};
+        const keys = Object.keys(sample || {});
+        const visibleKeys = keys.filter(key => !columnsToHide.includes(key));
+
+        const otherColumns = visibleKeys
+            .filter(key => !['hostname', 'sysName', 'sysname'].includes(key))
+            .map(key => ({
+                headerName: key.replace(/_/g, ' ').toUpperCase(),
+                field: key
+            }));
+
+        const hasHostOrSys = keys.includes('hostname') || keys.includes('sysName') || keys.includes('sysname');
+
+        if (hasHostOrSys) {
+            const deviceCol = [
+                {
+                    headerName: 'DEVICE',
+                    field: 'hostname',
+                    colId: 'hostname',
+                    wrapText: true,
+                    autoHeight: true,
+                    minWidth: 220,
+                    valueGetter: (params) => {
+                        const hostname = params.data?.hostname || '';
+                        const sysName = params.data?.sysName || params.data?.sysname || '';
+                        return [hostname, sysName].filter(Boolean).join(' ');
+                    },
+                    cellRenderer: (params) => {
+                        const hostname = params.data?.hostname || '';
+                        const sysName = params.data?.sysName || params.data?.sysname || '';
+                        return superposeValue(hostname, sysName);
+                    }
+                },
+                {
+                    headerName: 'ADMIN STATUS',
+                    field: 'adminStatus',
+                    colId: 'adminStatus',
+                    cellRenderer: (params) => {
+                        const value = params.data?.adminStatus;
+                        return value ? badgeContainer(String(value).toUpperCase()) : '';
+                    }
+                },
+                {
+                    headerName: 'OPER STATUS',
+                    colId: 'operStatus',
+                    cellRenderer: (params) => {
+                        const value = params.data?.operStatus;
+                        return value ? badgeContainer(String(value).toUpperCase()) : '';
+                    }
+                },
+            ];
+            columns.value = [...deviceCol, ...otherColumns];
+        } else {
+            columns.value = otherColumns;
+        }
+    }
 
 
     async function loadPorts() {
@@ -95,72 +161,26 @@
         error.value = null;
         try {
             console.log('[LoadPorts] Début du chargement des ports...');
+            let filter = {};
+            if (gridFilterModel.value && Object.keys(gridFilterModel.value).length > 0) {
+                filter = { ...gridFilterModel.value };
+            }
             const { rows: ports, totalCount: fetchedTotalCount } = await getLimitedPorts({
                 page: targetPage.value,
-                pageSize: pageSize.value
+                pageSize: pageSize.value,
+                filter,
             });
-            totalPagesDisplay.value = Math.ceil(fetchedTotalCount / pageSize.value);
-            
-            const columnsToHide = ['ne_id', 'device_id', 'hostname', 'sysName', 'sysname', 'adminStatus', 'operStatus'];
-
+            console.log('Total ports:', fetchedTotalCount);
+            const total = Number(fetchedTotalCount) || 0;
+            totalCountDisplay.value = total;
+            totalPagesDisplay.value = Math.max(1, Math.ceil(total / pageSize.value));
+            console.log('Total pages display:', totalPagesDisplay.value);
             if (!Array.isArray(ports)) {
                 throw new Error('Réponse inattendue du service ports');
             }
 
-            const sample = ports[0] || {};
-            const keys = Object.keys(sample || {});
-            const visibleKeys = keys.filter(key => !columnsToHide.includes(key));
-
-            const otherColumns = visibleKeys
-                .filter(key => !['hostname', 'sysName', 'sysname'].includes(key))
-                .map(key => ({
-                    headerName: key.replace(/_/g, ' ').toUpperCase(),
-                    field: key
-                }));
-
-            const hasHostOrSys = keys.includes('hostname') || keys.includes('sysName') || keys.includes('sysname');
-
-            if (hasHostOrSys) {
-                const deviceCol = [ 
-                    {
-                        headerName: 'DEVICE',
-                        colId: 'device',
-                        wrapText: true,
-                        autoHeight: true,
-                        minWidth: 220,
-                        valueGetter: (params) => {
-                            const hostname = params.data?.hostname || '';
-                            const sysName = params.data?.sysName || params.data?.sysname || '';
-                            return [hostname, sysName].filter(Boolean).join(' ');
-                        },
-                        cellRenderer: (params) => {
-                            const hostname = params.data?.hostname || '';
-                            const sysName = params.data?.sysName || params.data?.sysname || '';
-                            return superposeValue(hostname, sysName);
-                        }
-                    },
-                    {
-                        headerName: 'ADMIN STATUS',
-                        colId: 'adminStatus',
-                        cellRenderer: (params) => {
-                            const value = params.data?.adminStatus;
-                            return badgeContainer(value.toUpperCase());
-                        }
-                    },
-                    {
-                        headerName: 'OPER STATUS',
-                        colId: 'operStatus',
-                        cellRenderer: (params) => {
-                            const value = params.data?.operStatus;
-                            return badgeContainer(value.toUpperCase());
-                        }
-                    },
-                ];
-                columns.value = [...deviceCol, ...otherColumns];
-            } else {
-                columns.value = otherColumns;
-            }
-
+            // Utiliser la fonction réutilisable pour générer les colonnes
+            generateColumns(ports);
             rows.value = ports;
         } catch (err) {
             error.value = err.message;
@@ -183,6 +203,148 @@
         if (page > total) page = total;
         targetPage.value = page;
     }
+
+    // --- Helpers robustes pour interagir avec le wrapper / api ag-grid ---
+    function getGridApi() {
+    if (!agGridRef.value) return null;
+    return agGridRef.value.api || agGridRef.value.gridApi || (agGridRef.value.getApi && agGridRef.value.getApi()) || null;
+    }
+
+    function getGridFilterModel() {
+    try {
+        if (!agGridRef.value) return {};
+        if (typeof agGridRef.value.getFilterModel === 'function') return agGridRef.value.getFilterModel();
+        const api = getGridApi();
+        if (api && typeof api.getFilterModel === 'function') return api.getFilterModel();
+    } catch (e) {
+        console.warn('getGridFilterModel error', e);
+    }
+    return {};
+    }
+
+    function setGridFilterModel(model) {
+    try {
+        if (!agGridRef.value) return;
+        // Wrapper method if present
+        if (typeof agGridRef.value.setFilterModel === 'function') {
+        agGridRef.value.setFilterModel(model);
+        }
+        // Underlying grid API if present
+        const api = getGridApi();
+        if (api && typeof api.setFilterModel === 'function') {
+        api.setFilterModel(model);
+        // ensure UI is refreshed
+        api.onFilterChanged && api.onFilterChanged();
+        api.refreshFilters && api.refreshFilters();
+        // For client-side row model
+        api.refreshClientSideRowModel && api.refreshClientSideRowModel('filter');
+        }
+    } catch (e) {
+        console.warn('setGridFilterModel error', e);
+    }
+    }
+
+    // --- onFilterChanged : ne renvoie plus le model dans le grid (évite la boucle) ---
+    function onFilterChanged(filterModel) {
+    // Convertir le filterModel ag-grid en format backend (simple: prendre .filter ou .values)
+    if (!filterModel || Object.keys(filterModel).length === 0) {
+        gridFilterModel.value = null;
+        return;
+    }
+
+    const mapped = {};
+    for (const key in filterModel) {
+        const f = filterModel[key];
+        if (!f) continue;
+        // text filter
+        if (f.filter !== undefined && f.filter !== null && f.filter !== '') {
+        mapped[key] = f.filter;
+        continue;
+        }
+        // set filter (values)
+        if (Array.isArray(f.values) && f.values.length > 0) {
+        mapped[key] = f.values;
+        continue;
+        }
+        // range / other types can be added if needed
+    }
+
+    gridFilterModel.value = Object.keys(mapped).length > 0 ? mapped : null;
+    }
+
+    // --- applyFilters : utilise le helper pour lire le modèle actuel, construit le filter backend et recharge ---
+    async function applyFilters() {
+    if (!agGridRef.value) {
+        console.log('[ApplyFilters Ports] AgGrid ref non disponible');
+        return;
+    }
+
+    const currentFilterModel = getGridFilterModel();
+    console.log('[ApplyFilters Ports] Filtre actuel depuis AgGrid:', currentFilterModel);
+
+    const filterFromGrid = {};
+    for (const key in currentFilterModel) {
+        const f = currentFilterModel[key];
+        if (!f) continue;
+        if (f.filter !== undefined && f.filter !== null && f.filter !== '') {
+        filterFromGrid[key] = f.filter;
+        } else if (Array.isArray(f.values) && f.values.length) {
+        filterFromGrid[key] = f.values;
+        }
+    }
+
+    const externalFilter = gridFilterModel.value && typeof gridFilterModel.value === 'object' ? gridFilterModel.value : {};
+    const mergedFilter = { ...externalFilter, ...filterFromGrid };
+    gridFilterModel.value = Object.keys(mergedFilter).length > 0 ? mergedFilter : null;
+
+    // retourner à la page 1 et charger
+    targetPage.value = 1;
+    await loadPorts();
+    }
+
+    // --- clearFilters : vide le modèle interne, force la grid UI à se réinitialiser et recharge les données ---
+    async function clearFilters() {
+    console.log('[ClearFilters Ports] Effacement des filtres...');
+
+    // Reset backend filter state
+    gridFilterModel.value = null;
+    targetPage.value = 1;
+
+    // Force clear côté Ag-Grid (wrapper + api)
+    setGridFilterModel(null);
+
+    // En plus, tenter de vider individuellement les instances de filtre (sécurise l'UI)
+    try {
+        const api = getGridApi();
+        if (api && typeof api.getFilterModel === 'function') {
+        const curr = api.getFilterModel() || {};
+        for (const colId of Object.keys(curr)) {
+            try {
+            const inst = api.getFilterInstance && api.getFilterInstance(colId);
+            if (inst && typeof inst.setModel === 'function') {
+                inst.setModel(null);
+            }
+            } catch (inner) {
+            // ignore per-filter errors
+            }
+        }
+        api.setFilterModel && api.setFilterModel(null);
+        api.onFilterChanged && api.onFilterChanged();
+        api.refreshFilters && api.refreshFilters();
+        }
+    } catch (e) {
+        console.warn('clearFilters: erreur en forçant reset ag-grid', e);
+    }
+
+    // S'assurer que la référence wrapper (si elle garde un model interne) soit aussi vidée
+    if (agGridRef.value && typeof agGridRef.value.setFilterModel === 'function') {
+        try { agGridRef.value.setFilterModel(null); } catch (e) { /* noop */ }
+    }
+
+    // Recharger les données
+    await loadPorts();
+    }
+
 
     onMounted(async () => {
         await loadPorts();

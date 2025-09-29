@@ -10,7 +10,6 @@
       :rowMultiSelectWithClick="true"
       :suppressCellFocus="suppressCellFocus"
       :rowClassRules="rowClassRules"
-      :sideBar="sideBar"
       @grid-ready="onGridReady"
       @filter-changed="onFilterChanged"
     />
@@ -50,10 +49,7 @@ const defaultColDef = {
 }
 
 // SideBar activée avec panneau "Filters"
-const sideBar = {
-  toolPanels: ['filters'],
-  defaultToolPanel: 'filters'
-}
+
 
 const gridApi = ref(null)
 
