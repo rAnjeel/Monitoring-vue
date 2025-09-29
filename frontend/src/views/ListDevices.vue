@@ -96,7 +96,7 @@
     import CardNavbar from '@/components/CardNavbar.vue';
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, watch, computed } from 'vue';
-    import { getLimitedDevices, getDevices } from '@/services/devices/devices';
+    import { getLimitedDevices } from '@/services/devices/devices';   
     import { getTypeDevices } from '@/services/type devices/typeDevices';   
     import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
 
@@ -219,9 +219,15 @@
         error.value = null;
         try {
             console.log('[LoadDevices] Début du chargement des devices...');
-            const { rows: data, totalCount: fetchedTotalCount } = await getLimitedDevices({ 
-                page: targetPage.value, 
-                pageSize: pageSize.value, 
+            // Préparer le filtre à partir du modèle courant si disponible
+            let filter = {};
+            if (gridFilterModel.value && Object.keys(gridFilterModel.value).length > 0) {
+                filter = { ...gridFilterModel.value };
+            }
+            const { rows: data, totalCount: fetchedTotalCount } = await getLimitedDevices({
+                page: targetPage.value,
+                pageSize: pageSize.value,
+                filter,
             });
             console.log('Total devices:', fetchedTotalCount)
 
@@ -246,45 +252,7 @@
         }
     }
 
-    async function loadFilteredDevices() {
-        error.value = null;
-        try {
-            console.log('[LoadFilteredDevices] Début du chargement filtré des devices...', gridFilterModel.value);
-
-            // S'assurer qu'on ne passe pas null au service
-            const filterToSend = gridFilterModel.value && Object.keys(gridFilterModel.value).length > 0 
-                ? gridFilterModel.value 
-                : {};
-
-            // Appel au service getDevices avec le filtre
-            const response = await getDevices({ filter: filterToSend });
-
-            // getDevices retourne directement response.data, pas { rows, totalCount }
-            const devices = Array.isArray(response) 
-                ? response 
-                : (response && response.data ? response.data : []);
-
-            if (!Array.isArray(devices)) {
-                throw new Error('Réponse inattendue du service getDevices');
-            }
-
-            console.log('[LoadFilteredDevices] Devices filtrés reçus:', devices.length);
-
-            // Réutiliser la même logique de génération de colonnes que loadDevices
-            generateColumns(devices);
-            rows.value = devices;
-            
-            // Mettre à jour le compteur de pages pour les données filtrées
-            totalPagesDisplay.value = Math.ceil(devices.length / pageSize.value);
-            
-        } catch (err) {
-            error.value = err.message;
-            console.error('[LoadFilteredDevices] Erreur lors du chargement:', err);
-        } finally {
-            loading.value = false;
-            lastUpdated.value = new Date();
-        }
-    }
+    
 
     async function loadTypeDevices() {
         loading.value = true;
@@ -392,11 +360,8 @@
         
         gridFilterModel.value = newFilter;
         
-        if (newFilter) {
-            await loadFilteredDevices();
-        } else {
-            await loadDevices();
-        }
+        // Recharger avec pagination et filtre
+        await loadDevices();
     }
 
     // Effacer tous les filtres

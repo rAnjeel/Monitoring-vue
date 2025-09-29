@@ -30,15 +30,18 @@ export async function getDevices({filter = {}} = {}) {
   }
 }
 
-export async function getLimitedDevices({ page = 1, pageSize = 20 } = {}) {
+export async function getLimitedDevices({ page = 1, pageSize = 20, filter = {} } = {}) {
   try {
-    console.log("page = ",page, "pageSize = ",pageSize);
-    const response = await api.get('/devices/limit', {
-      params: { page, pageSize }
-    });
+    console.log("page = ",page, "pageSize = ",pageSize, "filter = ", filter);
+    const params = { page, pageSize };
+    if (filter && Object.keys(filter).length > 0) {
+      params.filter = JSON.stringify(filter);
+    }
+    const response = await api.get('/devices/limit', { params });
     // Comptage
     const rowsCount = Array.isArray(response.data.rows) ? response.data.rows.length : 0;
     const totalCount =
+      response.data.totalCount ??
       response.data.totalCountRes?.[0]?.count ??
       response.data.totalCountRes?.count ??
       0;
@@ -49,9 +52,9 @@ export async function getLimitedDevices({ page = 1, pageSize = 20 } = {}) {
       totalCount
     });
 
-    return { 
-      rows: response.data.rows || [], 
-      totalCount 
+    return {
+      rows: response.data.rows || [],
+      totalCount
     };
   } catch (error) {
     const jsonErrorMessage = error && error.response && error.response.data
