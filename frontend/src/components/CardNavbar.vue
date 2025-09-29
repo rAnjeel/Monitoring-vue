@@ -17,7 +17,7 @@
           >
             <slot name="card" :item="item" :index="index" :selected="selectedIndex === index">
               <div class="device-label">{{ getItemLabel(item) }}</div>
-              <div class="device-number">{{ getItemValue(item) }}/{{ getItemLength(item) }}</div>
+              <div class="device-number">{{ getItemLength(item) }}/{{ getItemValue(item) }}</div>
             </slot>
           </div>
         </div>

@@ -97,7 +97,7 @@
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, watch, computed } from 'vue';
     import { getLimitedDevices } from '@/services/devices/devices';   
-    import { getTypeDevices } from '@/services/type devices/typeDevices';   
+    import { getTypeDevicesCounts } from '@/services/type devices/typeDevices';   
     import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
 
     const customDevices = ref([]);
@@ -258,26 +258,19 @@
         loading.value = true;
         error.value = null;
         try {
-            console.log('[LoadTypeDevices] Début du chargement des types devices...');
-            const data = await getTypeDevices();
+            console.log('[LoadTypeDevices] Début du chargement des types devices (avec compteurs)...');
+            const data = await getTypeDevicesCounts();
             const types = Array.isArray(data) ? data : (data && data.data ? data.data : []);
 
             if (!Array.isArray(types)) {
                 throw new Error('Réponse inattendue du service type devices');
             }
 
-            const deviceCountByType = {};
-            if (rows.value && rows.value.length > 0) {
-                rows.value.forEach(device => {
-                    const typeName = device.type_device || 'Unknown';
-                    deviceCountByType[typeName] = (deviceCountByType[typeName] || 0) + 1;
-                });
-            }
-
+            // data attendu du backend: [{ type_device_id, type_device, total_devices, down_devices }]
             customDevices.value = types.map(t => ({
-                name: t.name,
-                value: deviceCountByType[t.name] || 0,
-                length: deviceCountByType[t.name] || 0,
+                name: t.type_device || t.name,
+                value: t.total_devices || 0,
+                length: t.down_devices || 0,
             }));
         } catch (err) {
             error.value = err.message;
@@ -289,25 +282,25 @@
     }
 
     // Gestion des événements
-    function handleDeviceSelect(device, index) {
+    async function handleDeviceSelect(device, index) {
         selectedDevice.value = device;
         
         if (device && index >= 0) {
             console.log('Appareil sélectionné:', device.name, 'Index:', index);
             
             // Filtrer par type_device si la colonne existe
-            if (columns.value.some(col => col.field === 'type_device')) {
-                gridFilterModel.value = {
-                    type_device: device.name
-                };
-            } else {
-                gridFilterModel.value = {
-                    global: device.name
-                };
-            }
+            const filterModel = columns.value.some(col => col.field === 'type_device')
+                ? { type_device: { filter: device.name } }
+                : { key: { filter: device.name } };
+
+            // Appliquer via les hooks standard
+            onFilterChanged(filterModel);
+            await applyFilters();
         } else {
             console.log('Appareil désélectionné');
-            gridFilterModel.value = null;
+            const filterModel = null;
+            onFilterChanged(filterModel || {});
+            await applyFilters();
         }
     }
 
@@ -316,22 +309,30 @@
     }
 
     function onFilterChanged(filterModel) {
+        // Synchroniser AgGrid avec le modèle fourni (ou le vider si null)
+        if (agGridRef.value) {
+            agGridRef.value.setFilterModel(filterModel || null);
+        }
+
+        // Si pas de modèle, on efface le filtre côté backend
+        if (!filterModel || Object.keys(filterModel).length === 0) {
+            console.log('[onFilterChanged] Aucun filtre, réinitialisation.');
+            gridFilterModel.value = null;
+            return;
+        }
+
         // Convertir le modèle de filtre AgGrid en format compatible avec le backend
         const filter = {};
         for (const key in filterModel) {
             const f = filterModel[key];
-            if (f.filter) {
-                // Format simple {key: value} comme attendu par le backend
+            if (f && typeof f === 'object' && 'filter' in f && f.filter !== undefined && f.filter !== null && f.filter !== '') {
                 filter[key] = f.filter;
             }
         }
-        
-        // Sauvegarder le filtre mais ne rien faire automatiquement
+
         const newFilter = Object.keys(filter).length > 0 ? filter : null;
-        console.log('[onFilterChanged] Filtre détecté (non appliqué automatiquement):', newFilter);
+        console.log('[onFilterChanged] Filtre synchronisé:', newFilter);
         gridFilterModel.value = newFilter;
-        
-        // Ne rien faire automatiquement - l'utilisateur doit cliquer sur "Apply Filters"
     }
 
 
@@ -347,19 +348,23 @@
         console.log('[ApplyFilters] Filtre actuel depuis AgGrid:', currentFilterModel);
 
         // Convertir le modèle de filtre AgGrid en format compatible avec le backend
-        const filter = {};
+        const filterFromGrid = {};
         for (const key in currentFilterModel) {
             const f = currentFilterModel[key];
-            if (f.filter) {
-                filter[key] = f.filter;
+            if (f && f.filter !== undefined && f.filter !== null && f.filter !== '') {
+                filterFromGrid[key] = f.filter;
             }
         }
 
-        const newFilter = Object.keys(filter).length > 0 ? filter : null;
-        console.log('[ApplyFilters] Application des filtres...', newFilter);
-        
-        gridFilterModel.value = newFilter;
-        
+        // Fusionner avec le filtre externe (ex: 'key' global) éventuellement défini par handleDeviceSelect
+        const externalFilter = gridFilterModel.value && typeof gridFilterModel.value === 'object' ? gridFilterModel.value : {};
+        const mergedFilter = { ...externalFilter, ...filterFromGrid };
+
+        const finalFilter = Object.keys(mergedFilter).length > 0 ? mergedFilter : null;
+        console.log('[ApplyFilters] Application des filtres (fusion):', finalFilter);
+
+        gridFilterModel.value = finalFilter;
+
         // Recharger avec pagination et filtre
         await loadDevices();
     }
