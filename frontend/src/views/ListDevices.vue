@@ -71,7 +71,7 @@
           </div>
         </div> -->
 
-        <div class="app-container">
+        <div class="app-container" @contextmenu.prevent>
             <AgGridModule
             grid-id="devices-grid"
             :column-defs="columns"
@@ -82,7 +82,9 @@
             @filter-changed="onFilterChanged"
             @filter-apply="applyFilters"
             @filter-reset="clearFilters"
+            @cell-context-menu="onCellContextMenu"
             />
+            <AgGridContextMenu :items="menuItems" />
         </div>
     </div>
     <CsvImport v-model="showImportDevices" :import-type="'devices'" @import="reloadGrid" />
@@ -99,6 +101,8 @@
     import { getLimitedDevices } from '@/services/devices/devices';   
     import { getTypeDevicesCounts } from '@/services/type devices/typeDevices';   
     import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
+    import AgGridContextMenu from '@/components/AgGridContextMenu.vue';
+    import MenuModule from '@/modules/AgGridModule';
 
     const customDevices = ref([]);
     const deviceNav = ref(null);
@@ -116,6 +120,26 @@
     const totalPagesDisplay = ref(1);
     const totalCountDisplay = ref(0);
     const showImportDevices = ref(false);
+    const menuItems = ref([
+        {
+            id: 'edit',
+            label: 'Edit',
+            icon: 'glyphicon glyphicon-pencil',
+            action: (row) => {
+                // eslint-disable-next-line no-console
+                console.log('[Action] Edit row:', row);
+            }
+        },
+        {
+            id: 'delete',
+            label: 'Delete',
+            icon: 'glyphicon glyphicon-trash',
+            action: (row) => {
+                // eslint-disable-next-line no-console
+                console.log('[Action] Delete row:', row);
+            }
+        }
+    ]);
 
     // UX counters for cards header
     const totalTypes = computed(() => customDevices.value?.length || 0);
@@ -399,6 +423,17 @@
         if (page > total) page = total;
         targetPage.value = page;
         // loadDevices();
+    }
+
+    function onCellContextMenu(event) {
+        // Blocage du menu natif pour utiliser notre menu personnalisé
+        if (event && event.event && typeof event.event.preventDefault === 'function') {
+            event.event.preventDefault();
+        }
+        const x = event?.event?.clientX ?? 0;
+        const y = event?.event?.clientY ?? 0;
+        const rowData = event?.data ?? null;
+        MenuModule.showMenu({ x, y, rowData });
     }
 
     

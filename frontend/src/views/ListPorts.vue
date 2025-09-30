@@ -54,7 +54,7 @@
             <span>Loading...</span>
           </div>
         </div> -->
-        <div class="app-container">
+        <div class="app-container" @contextmenu.prevent>
             <AgGridModule
                 grid-id="ports-grid"
                 :column-defs="columns"
@@ -64,7 +64,9 @@
                 @filter-changed="onFilterChanged"
                 @filter-apply="applyFilters"
                 @filter-reset="clearFilters"
+                @cell-context-menu="onCellContextMenu"
             />
+            <AgGridContextMenu :items="menuItems" />
         </div>
     </div>
     <CsvImport v-model="showImportPorts" :import-type="'ports'" @import="reloadGrid" />
@@ -78,6 +80,8 @@
     import { ref, onMounted, watch } from 'vue';
     import { getLimitedPorts } from '@/services/ports/ports';
     import { badgeContainer, superposeValue} from '@/services/utils/utils';
+    import AgGridContextMenu from '@/components/AgGridContextMenu.vue';
+    import MenuModule from '@/modules/AgGridModule';
 
 
     const loading = ref(false);
@@ -93,6 +97,26 @@
     const totalPagesDisplay = ref(1);
     const totalCountDisplay = ref(0);
     const showImportPorts = ref(false);
+    const menuItems = ref([
+        {
+            id: 'details',
+            label: 'Details',
+            icon: 'glyphicon glyphicon-list-alt',
+            action: (row) => {
+                // eslint-disable-next-line no-console
+                console.log('[Ports] Details:', row);
+            }
+        },
+        {
+            id: 'disable',
+            label: 'Disable Port',
+            icon: 'glyphicon glyphicon-ban-circle',
+            action: (row) => {
+                // eslint-disable-next-line no-console
+                console.log('[Ports] Disable:', row);
+            }
+        }
+    ]);
 
     // Générer dynamiquement les colonnes en s'inspirant de ListDevices.vue
     function generateColumns(portsData) {
@@ -202,6 +226,16 @@
         if (page < 1) page = 1;
         if (page > total) page = total;
         targetPage.value = page;
+    }
+
+    function onCellContextMenu(event) {
+        if (event && event.event && typeof event.event.preventDefault === 'function') {
+            event.event.preventDefault();
+        }
+        const x = event?.event?.clientX ?? 0;
+        const y = event?.event?.clientY ?? 0;
+        const rowData = event?.data ?? null;
+        MenuModule.showMenu({ x, y, rowData });
     }
 
     // --- Helpers robustes pour interagir avec le wrapper / api ag-grid ---
