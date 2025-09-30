@@ -12,6 +12,7 @@
       :rowClassRules="rowClassRules"
       @grid-ready="onGridReady"
       @filter-changed="onFilterChanged"
+      @cell-context-menu="onCellContextMenu"
     />
   </div>
 </template>
@@ -24,12 +25,12 @@ import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
 // Enregistrer tous les modules communautaires
 ModuleRegistry.registerModules([AllCommunityModule])
 
-const emit = defineEmits(['filter-changed', 'filter-apply'])
+const emit = defineEmits(['filter-changed', 'filter-apply', 'cell-context-menu'])
 const props = defineProps({
   gridId: { type: String, default: null },
   rowData: { type: Array, default: () => [] },
   columnDefs: { type: Array, required: true },
-  rowSelection: { type: [String, Object], default: 'multiple' },
+  rowSelection: { type: [String, Object], default: 'single' },
   pageSize: { type: Number, default: 20 },
   quickFilterText: { type: String, default: '' },
   filterModel: { type: Object, default: null },
@@ -47,9 +48,6 @@ const defaultColDef = {
     closeOnApply: true
   }
 }
-
-// SideBar activée avec panneau "Filters"
-
 
 const gridApi = ref(null)
 
@@ -90,6 +88,11 @@ function onFilterChanged() {
 
   // Appeler ta logique d'application de filtre custom
   emit('filter-apply', currentModel)
+}
+
+function onCellContextMenu(event) {
+  // Propager l'événement au parent pour gestion du menu contextuel
+  emit('cell-context-menu', event)
 }
 
 defineExpose({
