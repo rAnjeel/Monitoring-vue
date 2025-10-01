@@ -177,7 +177,7 @@
                     {
                         headerName: 'DEVICE',
                         field: 'hostname',
-                        colId: 'device',
+                        colId: 'hostname',
                         wrapText: true,
                         autoHeight: true,
                         minWidth: 200,
