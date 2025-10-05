@@ -1,4 +1,5 @@
 <template>
+  <div class="list-devices-page">
     <div class="sub-navbar">
         <div class="nav nav-tabs">
             <h5 class="text-uppercase" style="color:#ecf0f1; gap:12px;">
@@ -87,7 +88,39 @@
             <AgGridContextMenu :items="menuItems" />
         </div>
     </div>
-    <CsvImport v-model="showImportDevices" :import-type="'devices'" @import="reloadGrid" />
+  <CsvImport v-model="showImportDevices" :import-type="'devices'" @import="reloadGrid" />
+
+  <!-- Device Events Modal -->
+  <ModalComponent
+    v-model="showEventsModal"
+    :title="`Device events - ${selectedDeviceRow?.hostname || ''}`"
+    :width="'min(900px, 96vw)'"
+  >
+    <div v-if="eventsRows.length === 0" style="padding:8px 0;">No events</div>
+    <table v-else class="table table-striped table-condensed">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Loss %</th>
+          <th>Avg</th>
+          <th>Min</th>
+          <th>Max</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(e, idx) in eventsRows" :key="idx">
+          <td>{{ formatDate(e.event_time, 'YYYY-MM-DD HH:mm:ss') }}</td>
+          <td>{{ e.status }}</td>
+          <td>{{ e.loss }}</td>
+          <td>{{ e.avg }}</td>
+          <td>{{ e.min }}</td>
+          <td>{{ e.max }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </ModalComponent>
+  </div>
 </template>
 
 <script setup>
@@ -103,6 +136,8 @@
     import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
     import AgGridContextMenu from '@/components/AgGridContextMenu.vue';
     import MenuModule from '@/modules/AgGridModule';
+    import ModalComponent from '@/components/ModalComponent.vue';
+    import { getDeviceEventsByDeviceId } from '@/services/devices/deviceEvents';
 
     const customDevices = ref([]);
     const deviceNav = ref(null);
@@ -120,6 +155,12 @@
     const totalPagesDisplay = ref(1);
     const totalCountDisplay = ref(0);
     const showImportDevices = ref(false);
+    const showEventsModal = ref(false);
+    const selectedDeviceRow = ref(null);
+    const eventsRows = ref([]);
+    const eventsTotal = ref(0);
+    const eventsPage = ref(1);
+    const eventsPageSize = ref(20);
     const menuItems = ref([
         {
             id: 'edit',
@@ -137,6 +178,17 @@
             action: (row) => {
                 // eslint-disable-next-line no-console
                 console.log('[Action] Delete row:', row);
+            }
+        },
+        {
+            id: 'details',
+            label: 'Details',
+            icon: 'glyphicon glyphicon-info-sign',
+            action: async (row) => {
+                selectedDeviceRow.value = row;
+                eventsPage.value = 1;
+                await loadDeviceEvents();
+                showEventsModal.value = true;
             }
         }
     ]);
@@ -277,6 +329,29 @@
         } finally {
             loading.value = false;
             lastUpdated.value = new Date();
+        }
+    }
+
+    // Load device events for the selected device
+    async function loadDeviceEvents() {
+        const deviceId = selectedDeviceRow.value?.id;
+        if (!deviceId) {
+            eventsRows.value = [];
+            eventsTotal.value = 0;
+            return;
+        }
+        try {
+            const { rows, totalCount } = await getDeviceEventsByDeviceId(deviceId, {
+                page: eventsPage.value,
+                pageSize: eventsPageSize.value,
+            });
+            eventsRows.value = rows || [];
+            eventsTotal.value = Number(totalCount || 0);
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error('[DeviceEvents] load error:', e?.message || e);
+            eventsRows.value = [];
+            eventsTotal.value = 0;
         }
     }
 
