@@ -97,28 +97,13 @@
     :width="'min(900px, 96vw)'"
   >
     <div v-if="eventsRows.length === 0" style="padding:8px 0;">No events</div>
-    <table v-else class="table table-striped table-condensed">
-      <thead>
-        <tr>
-          <th>Date</th>
-          <th>Status</th>
-          <th>Loss %</th>
-          <th>Avg</th>
-          <th>Min</th>
-          <th>Max</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(e, idx) in eventsRows" :key="idx">
-          <td>{{ formatDate(e.event_time, 'YYYY-MM-DD HH:mm:ss') }}</td>
-          <td>{{ e.status }}</td>
-          <td>{{ e.loss }}</td>
-          <td>{{ e.avg }}</td>
-          <td>{{ e.min }}</td>
-          <td>{{ e.max }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <AgGridModule
+      v-else
+      grid-id="device-events-modal-grid"
+      :column-defs="eventColumns"
+      :row-data="eventsRows"
+      row-selection="single"
+    />
   </ModalComponent>
   </div>
 </template>
@@ -161,6 +146,15 @@
     const eventsTotal = ref(0);
     const eventsPage = ref(1);
     const eventsPageSize = ref(20);
+
+    const eventColumns = ref([
+      { headerName: 'Date', field: 'event_time', valueFormatter: params => formatDate(params.value, 'YYYY-MM-DD HH:mm:ss'), minWidth: 180 },
+      { headerName: 'Status', field: 'status', minWidth: 110 },
+      { headerName: 'Loss %', field: 'loss', minWidth: 100 },
+      { headerName: 'Avg', field: 'avg', minWidth: 90 },
+      { headerName: 'Min', field: 'min', minWidth: 90 },
+      { headerName: 'Max', field: 'max', minWidth: 90 },
+    ]);
     const menuItems = ref([
         {
             id: 'edit',
@@ -347,15 +341,14 @@
             });
             eventsRows.value = rows || [];
             eventsTotal.value = Number(totalCount || 0);
-        } catch (e) {
+            console.log('[DeviceEvents] Chargement des événements:', eventsRows.value);
+        } catch (error) {
             // eslint-disable-next-line no-console
-            console.error('[DeviceEvents] load error:', e?.message || e);
             eventsRows.value = [];
             eventsTotal.value = 0;
+            console.error('[DeviceEvents] Erreur lors du chargement:', error?.message || error );
         }
     }
-
-    
 
     async function loadTypeDevices() {
         loading.value = true;
