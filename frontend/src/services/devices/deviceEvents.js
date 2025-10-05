@@ -61,7 +61,7 @@ export async function getDeviceEvent(id) {
 }
 
 // Événements d'un device spécifique, paginés + filtres
-export async function getDeviceEventsByDeviceId(deviceId, { page = 1, pageSize = 20, status, start_date, end_date } = {}) {
+export async function getDeviceEventsByDeviceId(deviceId, { page, pageSize, status, start_date, end_date } = {}) {
   try {
     const params = { page, pageSize }
     if (status) params.status = status

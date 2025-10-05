@@ -96,6 +96,21 @@
     :title="`Device events - ${selectedDeviceRow?.hostname || ''}`"
     :width="'min(900px, 96vw)'"
   >
+    <div class="events-toolbar" style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
+      <label>Start
+        <input type="date" v-model="eventsStartDate" @change="onEventsFilterChanged" />
+      </label>
+      <label>End
+        <input type="date" v-model="eventsEndDate" @change="onEventsFilterChanged" />
+      </label>
+      <label>Page size
+        <select v-model.number="eventsPageSize" @change="onEventsPageSizeChanged">
+          <option :value="10">10</option>
+          <option :value="20">20</option>
+          <option :value="50">50</option>
+        </select>
+      </label>
+    </div>
     <div v-if="eventsRows.length === 0" style="padding:8px 0;">No events</div>
     <AgGridModule
       v-else
@@ -104,6 +119,11 @@
       :row-data="eventsRows"
       row-selection="single"
     />
+    <div class="events-pagination" style="display:flex;gap:12px;justify-content:flex-end;padding-top:8px;">
+      <button :disabled="eventsPage <= 1" @click="changeEventsPage(eventsPage - 1)">Prev</button>
+      <span>Page {{ eventsPage }} / {{ eventsTotalPages }}</span>
+      <button :disabled="eventsPage >= eventsTotalPages" @click="changeEventsPage(eventsPage + 1)">Next</button>
+    </div>
   </ModalComponent>
   </div>
 </template>
@@ -146,6 +166,9 @@
     const eventsTotal = ref(0);
     const eventsPage = ref(1);
     const eventsPageSize = ref(20);
+    const eventsStartDate = ref('');
+    const eventsEndDate = ref('');
+    const eventsTotalPages = computed(() => Math.max(1, Math.ceil((eventsTotal.value || 0) / eventsPageSize.value)));
 
     const eventColumns = ref([
       { headerName: 'Date', field: 'event_time', valueFormatter: params => formatDate(params.value, 'YYYY-MM-DD HH:mm:ss'), minWidth: 180 },
@@ -338,9 +361,11 @@
             const { rows, totalCount } = await getDeviceEventsByDeviceId(deviceId, {
                 page: eventsPage.value,
                 pageSize: eventsPageSize.value,
+                start_date: eventsStartDate.value || undefined,
+                end_date: eventsEndDate.value || undefined,
             });
             eventsRows.value = rows || [];
-            eventsTotal.value = Number(totalCount || 0);
+            eventsTotalPages.value = Number(totalCount || 0);
             console.log('[DeviceEvents] Chargement des événements:', eventsRows.value);
         } catch (error) {
             // eslint-disable-next-line no-console
@@ -348,6 +373,21 @@
             eventsTotal.value = 0;
             console.error('[DeviceEvents] Erreur lors du chargement:', error?.message || error );
         }
+    }
+
+    function onEventsFilterChanged() {
+        eventsPage.value = 1;
+        loadDeviceEvents();
+    }
+
+    function onEventsPageSizeChanged() {
+        eventsPage.value = 1;
+        loadDeviceEvents();
+    }
+
+    function changeEventsPage(p) {
+        eventsPage.value = p;
+        loadDeviceEvents();
     }
 
     async function loadTypeDevices() {
