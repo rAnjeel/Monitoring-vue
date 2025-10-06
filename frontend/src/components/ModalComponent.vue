@@ -65,7 +65,7 @@ function onBackdrop() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
+  padding: 4px 8px;
   background: linear-gradient(135deg, #425e7a 0%, #2c3e50 100%);
   color: #efefef;
   border-bottom: 0;
