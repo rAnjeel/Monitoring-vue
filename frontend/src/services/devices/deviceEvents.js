@@ -61,7 +61,7 @@ export async function getDeviceEvent(id) {
 }
 
 // Événements d'un device spécifique, paginés + filtres
-export async function getDeviceEventsByDeviceId(deviceId, { page = 1, pageSize = 20, status, start_date, end_date } = {}) {
+export async function getDeviceEventsByDeviceId(deviceId, { page, pageSize, status, start_date, end_date } = {}) {
   try {
     const params = { page, pageSize }
     if (status) params.status = status
@@ -69,8 +69,7 @@ export async function getDeviceEventsByDeviceId(deviceId, { page = 1, pageSize =
     if (end_date) params.end_date = end_date
     const response = await api.get(`/device-events/device/${deviceId}`, { params })
     const rows = Array.isArray(response.data.rows) ? response.data.rows : []
-    const totalCount = Number(response.data.totalCount ?? 0)
-    return { rows, totalCount, page, pageSize }
+    return { rows, page, pageSize, hasNextPage: response.data.hasNextPage }
   } catch (error) {
     const jsonErrorMessage = error && error.response && error.response.data
       ? (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data))

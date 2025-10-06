@@ -1,4 +1,5 @@
 <template>
+  <div class="list-ports-page">
     <div class="sub-navbar">
         <div class="nav nav-tabs">
             <h4 class="text-uppercase" style="color:#ecf0f1;">
@@ -70,6 +71,7 @@
         </div>
     </div>
     <CsvImport v-model="showImportPorts" :import-type="'ports'" @import="reloadGrid" />
+  </div>
 </template>
 
 <script setup>

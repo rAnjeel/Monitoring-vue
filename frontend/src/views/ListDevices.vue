@@ -1,4 +1,5 @@
 <template>
+  <div class="list-devices-page">
     <div class="sub-navbar">
         <div class="nav nav-tabs">
             <h5 class="text-uppercase" style="color:#ecf0f1; gap:12px;">
@@ -63,14 +64,6 @@
             </div>
         </div>
 
-        <!-- Loading overlay -->
-        <!-- <div v-if="loading" class="loading-overlay">
-          <div class="loading-box">
-            <span class="glyphicon glyphicon-refresh spinning" style="font-size:24px; margin-right:8px;"></span>
-            <span>Loading...</span>
-          </div>
-        </div> -->
-
         <div class="app-container" @contextmenu.prevent>
             <AgGridModule
             grid-id="devices-grid"
@@ -87,7 +80,81 @@
             <AgGridContextMenu :items="menuItems" />
         </div>
     </div>
+
     <CsvImport v-model="showImportDevices" :import-type="'devices'" @import="reloadGrid" />
+
+    <!-- Device Events Modal -->
+    <ModalComponent
+        v-model="showEventsModal"
+        :title="`Device events - ${selectedDeviceRow?.hostname || ''}`"
+        :width="'min(1000px, 96vw)'"
+    >
+        <!-- Détails des champs masqués de l'équipement sélectionné -->
+        <div class="device-details-block">
+            <DetailsComponent :data="hiddenDetails" :max-lines="5" />
+        </div>
+        <eChartComponent
+            :x="eventsChartX"
+            :y="chartSeries"
+            title="Latency"
+            x-label="Time"
+            y-label="ms"
+            height="300px"
+        />   
+        <!-- Header -->
+        <h4 class="events-section-title">Historic Events</h4>
+
+        <!-- Toolbar -->
+        <div class="events-toolbar" style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
+        <label>Start
+            <input type="datetime-local" v-model="eventsStartDate" @change="onEventsFilterChanged" />
+        </label>
+        <label>End
+            <input type="datetime-local" v-model="eventsEndDate" @change="onEventsFilterChanged" />
+        </label>
+        <label>Page size
+            <select v-model.number="eventsPageSize" @change="onEventsPageSizeChanged">
+            <option :value="10">10</option>
+            <option :value="20">20</option>
+            <option :value="50">50</option>
+            </select>
+        </label>
+        <label>Status
+            <select v-model="eventsStatus" @change="onEventsFilterChanged">
+            <option value="">All</option>
+            <option value="up">Up</option>
+            <option value="down">Down</option>
+            </select>
+        </label>
+        <label>Go to page
+            <input type="number" min="1" v-model.number="eventsTargetPage" 
+                    @keyup.enter="jumpToEventsPage" 
+                    class="form-control input-sm" 
+                    style="display:inline-block;width:80px;margin-left:4px;" />
+        </label>
+        <button @click="loadDeviceEvents" class="btn btn-sm btn-primary" :disabled="loading">
+            <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
+            Reload
+        </button>
+        </div>
+
+        <!-- Grid -->
+        <div v-if="eventsRows.length === 0" style="padding:8px 0;">No events</div>
+        <AgGridModule
+        v-else
+        grid-id="device-events-modal-grid"
+        :column-defs="eventColumns"
+        :row-data="eventsRows"
+        row-selection="single"
+        />
+
+        <div class="events-pagination" style="display:flex;gap:12px;justify-content:flex-end;padding-top:8px;">
+        <button :disabled="eventsPage <= 1" @click="changeEventsPage(eventsPage - 1)">Prev</button>
+        <span>Page {{ eventsPage }} {{ eventsHasNextPage ? '+' : '' }}</span>
+        <button :disabled="!eventsHasNextPage" @click="changeEventsPage(eventsPage + 1)">Next</button>
+        </div>
+    </ModalComponent>
+  </div>
 </template>
 
 <script setup>
@@ -103,6 +170,10 @@
     import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
     import AgGridContextMenu from '@/components/AgGridContextMenu.vue';
     import MenuModule from '@/modules/AgGridModule';
+    import ModalComponent from '@/components/ModalComponent.vue';
+    import eChartComponent from '@/components/eChartComponent.vue';
+    import { getDeviceEventsByDeviceId } from '@/services/devices/deviceEvents';
+    import DetailsComponent from '@/components/DetailsComponent.vue';
 
     const customDevices = ref([]);
     const deviceNav = ref(null);
@@ -120,6 +191,57 @@
     const totalPagesDisplay = ref(1);
     const totalCountDisplay = ref(0);
     const showImportDevices = ref(false);
+    const showEventsModal = ref(false);
+    const selectedDeviceRow = ref(null);
+    const eventsRows = ref([]);
+    const eventsPage = ref(1);
+    const eventsPageSize = ref(20);
+    const eventsStartDate = ref('');
+    const eventsEndDate = ref('');
+    const eventsStatus = ref('');
+    const eventsHasNextPage = ref(false);
+    const eventsTargetPage = ref(1);
+
+    const eventColumns = ref([
+      { headerName: 'Status', field: 'status', minWidth: 80 },
+      { headerName: 'Loss %', field: 'loss', minWidth: 80 },
+      { headerName: 'Avg', field: 'avg', minWidth: 80 },
+      { headerName: 'Min', field: 'min', minWidth: 80 },
+      { headerName: 'Max', field: 'max', minWidth: 80 },
+      { headerName: 'Date', field: 'event_time', valueFormatter: params => formatDate(params.value, 'YYYY-MM-DD HH:mm:ss'), minWidth: 180 },
+
+    ]);
+    
+    // Données pour le graphique des événements (x: event_time, y: avg)
+    const sortedEvents = computed(() =>
+    (eventsRows.value || []).slice().sort((a, b) => new Date(a.event_time) - new Date(b.event_time))
+    );
+
+    const eventsChartX = computed(() =>
+    sortedEvents.value.map(r => r?.event_time ? formatDate(r.event_time, 'HH:mm:ss') : '')
+    );
+
+    const chartSeries = computed(() => [
+    { name: 'AVG',  data: sortedEvents.value.map(r => Number(r?.avg ?? 0)) },
+    { name: 'MIN',  data: sortedEvents.value.map(r => Number(r?.min ?? 0)) },
+    { name: 'MAX',  data: sortedEvents.value.map(r => Number(r?.max ?? 0)) },
+    { name: 'LOSS', data: sortedEvents.value.map(r => Number(r?.loss ?? 0)) },
+    ]);
+
+
+    const detailsColumns = ['device_id', 'hostname', 'sysName', 'snmp_disable', 'community', 'authlevel', 'authname', 'authalgo', 'snmpver'];
+    const hiddenDetails = computed(() => {
+        const row = selectedDeviceRow.value || null;
+        if (!row || typeof row !== 'object') return {};
+        const result = {};
+        for (const key of detailsColumns) {
+            if (Object.prototype.hasOwnProperty.call(row, key)) {
+                result[key] = row[key];
+            }
+        }
+        return result;
+    });
+
     const menuItems = ref([
         {
             id: 'edit',
@@ -138,12 +260,21 @@
                 // eslint-disable-next-line no-console
                 console.log('[Action] Delete row:', row);
             }
+        },
+        {
+            id: 'details',
+            label: 'Details',
+            icon: 'glyphicon glyphicon-info-sign',
+            action: async (row) => {
+                selectedDeviceRow.value = row;
+                eventsPage.value = 1;
+                await loadDeviceEvents();
+                showEventsModal.value = true;
+            }
         }
     ]);
 
-    // UX counters for cards header
     const totalTypes = computed(() => customDevices.value?.length || 0);
-
     const rowClassRules = {
     'up-row': params => params.data?.ping_status == 1,
     'down-row': params => params.data?.ping_status == 0,
@@ -267,7 +398,6 @@
                 throw new Error('Réponse inattendue du service devices');
             }
 
-            // Utiliser la fonction réutilisable pour générer les colonnes
             generateColumns(devices);
 
             rows.value = devices;
@@ -280,7 +410,61 @@
         }
     }
 
-    
+    // Load device events for the selected device
+    async function loadDeviceEvents() {
+        const deviceId = selectedDeviceRow.value?.id;
+        if (!deviceId) {
+            eventsRows.value = [];
+            return;
+        }
+        try {
+            const { rows, page, pageSize, hasNextPage } = await getDeviceEventsByDeviceId(deviceId, {
+                page: eventsPage.value,
+                pageSize: eventsPageSize.value,
+                status: eventsStatus.value || undefined,
+                start_date: eventsStartDate.value || undefined,
+                end_date: eventsEndDate.value || undefined,
+            });
+            eventsRows.value = rows || [];
+            eventsHasNextPage.value = hasNextPage || false;
+            eventsPage.value = page || 1;
+            eventsPageSize.value = pageSize || 20;
+            eventsTargetPage.value = eventsPage.value;
+            console.log('[DeviceEvents] Chargement des événements:', eventsRows.value);
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            eventsRows.value = [];
+            console.error('[DeviceEvents] Erreur lors du chargement:', error?.message || error );
+        }
+    }
+
+    function onEventsFilterChanged() {
+        eventsPage.value = 1;
+        eventsTargetPage.value = 1;
+        loadDeviceEvents();
+    }
+
+    function onEventsPageSizeChanged() {
+        eventsPage.value = 1;
+        eventsTargetPage.value = 1;
+        // Le watcher se chargera de recharger les données
+    }
+
+    function changeEventsPage(p) {
+        let page = Number(p) || 1;
+        if (page < 1) page = 1;
+        eventsPage.value = page;
+        eventsTargetPage.value = page; // Synchroniser l'input
+        // Le watcher se chargera de recharger les données
+    }
+
+    function jumpToEventsPage() {
+        let page = Number(eventsTargetPage.value) || 1;
+        if (page < 1) page = 1;
+        eventsPage.value = page;
+        eventsTargetPage.value = page;
+        // Le watcher se chargera de recharger les données
+    }
 
     async function loadTypeDevices() {
         loading.value = true;
@@ -416,13 +600,10 @@
 
     function jumpToPage() {
         const total = Number(totalPagesDisplay.value) || 1;
-        console.log("TOTAL :", total);
         let page = Number(targetPage.value) || 1;
-        console.log("page :", page);
         if (page < 1) page = 1;
         if (page > total) page = total;
         targetPage.value = page;
-        // loadDevices();
     }
 
     function onCellContextMenu(event) {
@@ -453,6 +634,14 @@
     watch([() => targetPage.value, () => pageSize.value], async () => {
      // Rechargez les données si la page ou la taille de page change
         await loadDevices();
+    });
+
+    // Watcher pour la pagination des événements (similaire à celui des devices)
+    watch([() => eventsPage.value, () => eventsPageSize.value], async () => {
+        // Rechargez les événements si la page ou la taille de page change
+        if (selectedDeviceRow.value?.id) {
+            await loadDeviceEvents();
+        }
     });
     
 </script>
