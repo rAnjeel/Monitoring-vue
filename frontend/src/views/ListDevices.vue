@@ -94,14 +94,14 @@
   <ModalComponent
     v-model="showEventsModal"
     :title="`Device events - ${selectedDeviceRow?.hostname || ''}`"
-    :width="'min(900px, 96vw)'"
+    :width="'min(1000px, 96vw)'"
   >
     <div class="events-toolbar" style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
       <label>Start
-        <input type="date" v-model="eventsStartDate" @change="onEventsFilterChanged" />
+        <input type="datetime-local" v-model="eventsStartDate" @change="onEventsFilterChanged" />
       </label>
       <label>End
-        <input type="date" v-model="eventsEndDate" @change="onEventsFilterChanged" />
+        <input type="datetime-local" v-model="eventsEndDate" @change="onEventsFilterChanged" />
       </label>
       <label>Page size
         <select v-model.number="eventsPageSize" @change="onEventsPageSizeChanged">
