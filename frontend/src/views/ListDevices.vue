@@ -93,7 +93,14 @@
         <div class="device-details-block">
             <DetailsComponent :data="hiddenDetails" :max-lines="5" />
         </div>
-        
+        <eChartComponent
+            :x="eventsChartX"
+            :y="chartSeries"
+            title="Latency"
+            x-label="Time"
+            y-label="ms"
+            height="300px"
+        />   
         <!-- Header -->
         <h4 class="events-section-title">Historic Events</h4>
 
@@ -164,6 +171,7 @@
     import AgGridContextMenu from '@/components/AgGridContextMenu.vue';
     import MenuModule from '@/modules/AgGridModule';
     import ModalComponent from '@/components/ModalComponent.vue';
+    import eChartComponent from '@/components/eChartComponent.vue';
     import { getDeviceEventsByDeviceId } from '@/services/devices/deviceEvents';
     import DetailsComponent from '@/components/DetailsComponent.vue';
 
@@ -204,6 +212,23 @@
 
     ]);
     
+    // Données pour le graphique des événements (x: event_time, y: avg)
+    const sortedEvents = computed(() =>
+    (eventsRows.value || []).slice().sort((a, b) => new Date(a.event_time) - new Date(b.event_time))
+    );
+
+    const eventsChartX = computed(() =>
+    sortedEvents.value.map(r => r?.event_time ? formatDate(r.event_time, 'HH:mm:ss') : '')
+    );
+
+    const chartSeries = computed(() => [
+    { name: 'AVG',  data: sortedEvents.value.map(r => Number(r?.avg ?? 0)) },
+    { name: 'MIN',  data: sortedEvents.value.map(r => Number(r?.min ?? 0)) },
+    { name: 'MAX',  data: sortedEvents.value.map(r => Number(r?.max ?? 0)) },
+    { name: 'LOSS', data: sortedEvents.value.map(r => Number(r?.loss ?? 0)) },
+    ]);
+
+
     const detailsColumns = ['device_id', 'hostname', 'sysName', 'snmp_disable', 'community', 'authlevel', 'authname', 'authalgo', 'snmpver'];
     const hiddenDetails = computed(() => {
         const row = selectedDeviceRow.value || null;
