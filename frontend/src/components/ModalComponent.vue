@@ -11,12 +11,6 @@
       <div class="modal-body">
         <slot />
       </div>
-
-      <div class="modal-footer">
-        <slot name="footer">
-          <button class="primary" @click="close">Fermer</button>
-        </slot>
-      </div>
     </div>
   </div>
   
@@ -49,6 +43,7 @@ function onBackdrop() {
 
 <style scoped>
 .modal-backdrop {
+  position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.35);
   display: flex;
@@ -70,20 +65,42 @@ function onBackdrop() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid #eee;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #425e7a 0%, #2c3e50 100%);
+  color: #efefef;
+  border-bottom: 0;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .modal-title {
   margin: 0;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
 }
 
 .close-btn {
   border: none;
-  background: transparent;
-  font-size: 20px;
+  background: rgba(255,255,255,0.16);
+  color: #fff;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 18px;
+  line-height: 32px;
+  text-align: center;
   cursor: pointer;
+  transition: background 0.2s ease, transform 0.05s ease;
+}
+
+.close-btn:hover {
+  background: rgba(255,255,255,0.28);
+}
+
+.close-btn:active {
+  transform: scale(0.98);
 }
 
 .modal-body {
@@ -96,15 +113,6 @@ function onBackdrop() {
   border-top: 1px solid #eee;
   display: flex;
   justify-content: flex-end;
-}
-
-.primary {
-  background: #2f74c0;
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
 }
 </style>
 

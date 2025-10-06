@@ -89,7 +89,15 @@
         :title="`Device events - ${selectedDeviceRow?.hostname || ''}`"
         :width="'min(1000px, 96vw)'"
     >
-    
+        <!-- Détails des champs masqués de l'équipement sélectionné -->
+        <div class="device-details-block">
+            <DetailsComponent :data="hiddenDetails" :max-lines="5" />
+        </div>
+        
+        <!-- Header -->
+        <h4 class="events-section-title">Historic Events</h4>
+
+        <!-- Toolbar -->
         <div class="events-toolbar" style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
         <label>Start
             <input type="datetime-local" v-model="eventsStartDate" @change="onEventsFilterChanged" />
@@ -123,6 +131,7 @@
         </button>
         </div>
 
+        <!-- Grid -->
         <div v-if="eventsRows.length === 0" style="padding:8px 0;">No events</div>
         <AgGridModule
         v-else
@@ -156,6 +165,7 @@
     import MenuModule from '@/modules/AgGridModule';
     import ModalComponent from '@/components/ModalComponent.vue';
     import { getDeviceEventsByDeviceId } from '@/services/devices/deviceEvents';
+    import DetailsComponent from '@/components/DetailsComponent.vue';
 
     const customDevices = ref([]);
     const deviceNav = ref(null);
@@ -193,6 +203,20 @@
       { headerName: 'Date', field: 'event_time', valueFormatter: params => formatDate(params.value, 'YYYY-MM-DD HH:mm:ss'), minWidth: 180 },
 
     ]);
+    
+    const detailsColumns = ['device_id', 'hostname', 'sysName', 'snmp_disable', 'community', 'authlevel', 'authname', 'authalgo', 'snmpver'];
+    const hiddenDetails = computed(() => {
+        const row = selectedDeviceRow.value || null;
+        if (!row || typeof row !== 'object') return {};
+        const result = {};
+        for (const key of detailsColumns) {
+            if (Object.prototype.hasOwnProperty.call(row, key)) {
+                result[key] = row[key];
+            }
+        }
+        return result;
+    });
+
     const menuItems = ref([
         {
             id: 'edit',
@@ -225,9 +249,7 @@
         }
     ]);
 
-    // UX counters for cards header
     const totalTypes = computed(() => customDevices.value?.length || 0);
-
     const rowClassRules = {
     'up-row': params => params.data?.ping_status == 1,
     'down-row': params => params.data?.ping_status == 0,
