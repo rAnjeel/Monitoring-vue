@@ -80,56 +80,64 @@
             <AgGridContextMenu :items="menuItems" />
         </div>
     </div>
-  <CsvImport v-model="showImportDevices" :import-type="'devices'" @import="reloadGrid" />
 
-  <!-- Device Events Modal -->
-  <ModalComponent
-    v-model="showEventsModal"
-    :title="`Device events - ${selectedDeviceRow?.hostname || ''}`"
-    :width="'min(1000px, 96vw)'"
-  >
-    <div class="events-toolbar" style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
-      <label>Start
-        <input type="datetime-local" v-model="eventsStartDate" @change="onEventsFilterChanged" />
-      </label>
-      <label>End
-        <input type="datetime-local" v-model="eventsEndDate" @change="onEventsFilterChanged" />
-      </label>
-      <label>Page size
-        <select v-model.number="eventsPageSize" @change="onEventsPageSizeChanged">
-          <option :value="10">10</option>
-          <option :value="20">20</option>
-          <option :value="50">50</option>
-        </select>
-      </label>
-      <label>Status
-        <select v-model="eventsStatus" @change="onEventsFilterChanged">
-          <option value="">All</option>
-          <option value="up">Up</option>
-          <option value="down">Down</option>
-        </select>
-      </label>
-      <label>Go to page
-        <input type="number" min="1" v-model.number="eventsTargetPage" 
-                @keyup.enter="jumpToEventsPage" 
-                class="form-control input-sm" 
-                style="display:inline-block;width:80px;margin-left:4px;" />
-      </label>
-    </div>
-    <div v-if="eventsRows.length === 0" style="padding:8px 0;">No events</div>
-    <AgGridModule
-      v-else
-      grid-id="device-events-modal-grid"
-      :column-defs="eventColumns"
-      :row-data="eventsRows"
-      row-selection="single"
-    />
-    <div class="events-pagination" style="display:flex;gap:12px;justify-content:flex-end;padding-top:8px;">
-      <button :disabled="eventsPage <= 1" @click="changeEventsPage(eventsPage - 1)">Prev</button>
-      <span>Page {{ eventsPage }} {{ eventsHasNextPage ? '+' : '' }}</span>
-      <button :disabled="!eventsHasNextPage" @click="changeEventsPage(eventsPage + 1)">Next</button>
-    </div>
-  </ModalComponent>
+    <CsvImport v-model="showImportDevices" :import-type="'devices'" @import="reloadGrid" />
+
+    <!-- Device Events Modal -->
+    <ModalComponent
+        v-model="showEventsModal"
+        :title="`Device events - ${selectedDeviceRow?.hostname || ''}`"
+        :width="'min(1000px, 96vw)'"
+    >
+    
+        <div class="events-toolbar" style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
+        <label>Start
+            <input type="datetime-local" v-model="eventsStartDate" @change="onEventsFilterChanged" />
+        </label>
+        <label>End
+            <input type="datetime-local" v-model="eventsEndDate" @change="onEventsFilterChanged" />
+        </label>
+        <label>Page size
+            <select v-model.number="eventsPageSize" @change="onEventsPageSizeChanged">
+            <option :value="10">10</option>
+            <option :value="20">20</option>
+            <option :value="50">50</option>
+            </select>
+        </label>
+        <label>Status
+            <select v-model="eventsStatus" @change="onEventsFilterChanged">
+            <option value="">All</option>
+            <option value="up">Up</option>
+            <option value="down">Down</option>
+            </select>
+        </label>
+        <label>Go to page
+            <input type="number" min="1" v-model.number="eventsTargetPage" 
+                    @keyup.enter="jumpToEventsPage" 
+                    class="form-control input-sm" 
+                    style="display:inline-block;width:80px;margin-left:4px;" />
+        </label>
+        <button @click="loadDeviceEvents" class="btn btn-sm btn-primary" :disabled="loading">
+            <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
+            Reload
+        </button>
+        </div>
+
+        <div v-if="eventsRows.length === 0" style="padding:8px 0;">No events</div>
+        <AgGridModule
+        v-else
+        grid-id="device-events-modal-grid"
+        :column-defs="eventColumns"
+        :row-data="eventsRows"
+        row-selection="single"
+        />
+
+        <div class="events-pagination" style="display:flex;gap:12px;justify-content:flex-end;padding-top:8px;">
+        <button :disabled="eventsPage <= 1" @click="changeEventsPage(eventsPage - 1)">Prev</button>
+        <span>Page {{ eventsPage }} {{ eventsHasNextPage ? '+' : '' }}</span>
+        <button :disabled="!eventsHasNextPage" @click="changeEventsPage(eventsPage + 1)">Next</button>
+        </div>
+    </ModalComponent>
   </div>
 </template>
 
