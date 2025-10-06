@@ -64,14 +64,6 @@
             </div>
         </div>
 
-        <!-- Loading overlay -->
-        <!-- <div v-if="loading" class="loading-overlay">
-          <div class="loading-box">
-            <span class="glyphicon glyphicon-refresh spinning" style="font-size:24px; margin-right:8px;"></span>
-            <span>Loading...</span>
-          </div>
-        </div> -->
-
         <div class="app-container" @contextmenu.prevent>
             <AgGridModule
             grid-id="devices-grid"
@@ -110,6 +102,19 @@
           <option :value="50">50</option>
         </select>
       </label>
+      <label>Status
+        <select v-model="eventsStatus" @change="onEventsFilterChanged">
+          <option value="">All</option>
+          <option value="up">Up</option>
+          <option value="down">Down</option>
+        </select>
+      </label>
+      <label>Go to page
+        <input type="number" min="1" v-model.number="eventsTargetPage" 
+                @keyup.enter="jumpToEventsPage" 
+                class="form-control input-sm" 
+                style="display:inline-block;width:80px;margin-left:4px;" />
+      </label>
     </div>
     <div v-if="eventsRows.length === 0" style="padding:8px 0;">No events</div>
     <AgGridModule
@@ -121,8 +126,8 @@
     />
     <div class="events-pagination" style="display:flex;gap:12px;justify-content:flex-end;padding-top:8px;">
       <button :disabled="eventsPage <= 1" @click="changeEventsPage(eventsPage - 1)">Prev</button>
-      <span>Page {{ eventsPage }} / {{ eventsTotalPages }}</span>
-      <button :disabled="eventsPage >= eventsTotalPages" @click="changeEventsPage(eventsPage + 1)">Next</button>
+      <span>Page {{ eventsPage }} {{ eventsHasNextPage ? '+' : '' }}</span>
+      <button :disabled="!eventsHasNextPage" @click="changeEventsPage(eventsPage + 1)">Next</button>
     </div>
   </ModalComponent>
   </div>
@@ -163,20 +168,22 @@
     const showEventsModal = ref(false);
     const selectedDeviceRow = ref(null);
     const eventsRows = ref([]);
-    const eventsTotal = ref(0);
     const eventsPage = ref(1);
     const eventsPageSize = ref(20);
     const eventsStartDate = ref('');
     const eventsEndDate = ref('');
-    const eventsTotalPages = computed(() => Math.max(1, Math.ceil((eventsTotal.value || 0) / eventsPageSize.value)));
+    const eventsStatus = ref('');
+    const eventsHasNextPage = ref(false);
+    const eventsTargetPage = ref(1);
 
     const eventColumns = ref([
+      { headerName: 'Status', field: 'status', minWidth: 80 },
+      { headerName: 'Loss %', field: 'loss', minWidth: 80 },
+      { headerName: 'Avg', field: 'avg', minWidth: 80 },
+      { headerName: 'Min', field: 'min', minWidth: 80 },
+      { headerName: 'Max', field: 'max', minWidth: 80 },
       { headerName: 'Date', field: 'event_time', valueFormatter: params => formatDate(params.value, 'YYYY-MM-DD HH:mm:ss'), minWidth: 180 },
-      { headerName: 'Status', field: 'status', minWidth: 110 },
-      { headerName: 'Loss %', field: 'loss', minWidth: 100 },
-      { headerName: 'Avg', field: 'avg', minWidth: 90 },
-      { headerName: 'Min', field: 'min', minWidth: 90 },
-      { headerName: 'Max', field: 'max', minWidth: 90 },
+
     ]);
     const menuItems = ref([
         {
@@ -336,7 +343,6 @@
                 throw new Error('Réponse inattendue du service devices');
             }
 
-            // Utiliser la fonction réutilisable pour générer les colonnes
             generateColumns(devices);
 
             rows.value = devices;
@@ -354,40 +360,55 @@
         const deviceId = selectedDeviceRow.value?.id;
         if (!deviceId) {
             eventsRows.value = [];
-            eventsTotal.value = 0;
             return;
         }
         try {
-            const { rows, totalCount } = await getDeviceEventsByDeviceId(deviceId, {
+            const { rows, page, pageSize, hasNextPage } = await getDeviceEventsByDeviceId(deviceId, {
                 page: eventsPage.value,
                 pageSize: eventsPageSize.value,
+                status: eventsStatus.value || undefined,
                 start_date: eventsStartDate.value || undefined,
                 end_date: eventsEndDate.value || undefined,
             });
             eventsRows.value = rows || [];
-            eventsTotalPages.value = Number(totalCount || 0);
+            eventsHasNextPage.value = hasNextPage || false;
+            eventsPage.value = page || 1;
+            eventsPageSize.value = pageSize || 20;
+            eventsTargetPage.value = eventsPage.value;
             console.log('[DeviceEvents] Chargement des événements:', eventsRows.value);
         } catch (error) {
             // eslint-disable-next-line no-console
             eventsRows.value = [];
-            eventsTotal.value = 0;
             console.error('[DeviceEvents] Erreur lors du chargement:', error?.message || error );
         }
     }
 
     function onEventsFilterChanged() {
         eventsPage.value = 1;
+        eventsTargetPage.value = 1;
         loadDeviceEvents();
     }
 
     function onEventsPageSizeChanged() {
         eventsPage.value = 1;
-        loadDeviceEvents();
+        eventsTargetPage.value = 1;
+        // Le watcher se chargera de recharger les données
     }
 
     function changeEventsPage(p) {
-        eventsPage.value = p;
-        loadDeviceEvents();
+        let page = Number(p) || 1;
+        if (page < 1) page = 1;
+        eventsPage.value = page;
+        eventsTargetPage.value = page; // Synchroniser l'input
+        // Le watcher se chargera de recharger les données
+    }
+
+    function jumpToEventsPage() {
+        let page = Number(eventsTargetPage.value) || 1;
+        if (page < 1) page = 1;
+        eventsPage.value = page;
+        eventsTargetPage.value = page;
+        // Le watcher se chargera de recharger les données
     }
 
     async function loadTypeDevices() {
@@ -524,13 +545,10 @@
 
     function jumpToPage() {
         const total = Number(totalPagesDisplay.value) || 1;
-        console.log("TOTAL :", total);
         let page = Number(targetPage.value) || 1;
-        console.log("page :", page);
         if (page < 1) page = 1;
         if (page > total) page = total;
         targetPage.value = page;
-        // loadDevices();
     }
 
     function onCellContextMenu(event) {
@@ -561,6 +579,14 @@
     watch([() => targetPage.value, () => pageSize.value], async () => {
      // Rechargez les données si la page ou la taille de page change
         await loadDevices();
+    });
+
+    // Watcher pour la pagination des événements (similaire à celui des devices)
+    watch([() => eventsPage.value, () => eventsPageSize.value], async () => {
+        // Rechargez les événements si la page ou la taille de page change
+        if (selectedDeviceRow.value?.id) {
+            await loadDeviceEvents();
+        }
     });
     
 </script>
