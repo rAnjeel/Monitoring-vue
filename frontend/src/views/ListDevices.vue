@@ -634,6 +634,11 @@
             await loadDevices();
         });
 
+        // Refresh devices list on bulk update
+        onSocket('devices:bulk_update', async () => {
+            await loadDevices();
+        });
+
         // Refresh device events when a new event is created
         onSocket('deviceEvents:created', async (payload) => {
             const currentDeviceId = selectedDeviceRow.value?.id;
@@ -650,21 +655,20 @@
         disconnectSocket();
     });
 
-    // Watch pour réinitialiser le filtre si pas de device sélectionné
+    // Watcher pour la sélection d'un device
     watch(selectedDevice, (newDevice) => {
         if (!newDevice) {
             gridFilterModel.value = null;
         }
     });
 
+    // Watcher pour la pagination des devices
     watch([() => targetPage.value, () => pageSize.value], async () => {
-     // Rechargez les données si la page ou la taille de page change
         await loadDevices();
     });
 
-    // Watcher pour la pagination des événements (similaire à celui des devices)
+    // Watcher pour la pagination des historiques
     watch([() => eventsPage.value, () => eventsPageSize.value], async () => {
-        // Rechargez les événements si la page ou la taille de page change
         if (selectedDeviceRow.value?.id) {
             await loadDeviceEvents();
         }
