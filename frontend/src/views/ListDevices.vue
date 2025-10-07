@@ -224,7 +224,7 @@
     );
 
     const chartSeries = computed(() => {
-        const threshold = Number( process.env.VITE_PING_LOSS_THRESHOLD || 10)
+        const threshold = Number( process.env.VUE_PING_LOSS_THRESHOLD || 10)
         const length = sortedEvents.value.length
         const thresholdLine = Array.from({ length }, () => threshold)
         return [
