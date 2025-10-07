@@ -164,7 +164,8 @@
     import '@/assets/AgGrid.css';
     import CardNavbar from '@/components/CardNavbar.vue';
     import AgGridModule from '@/components/AgGridModule.vue';
-    import { ref, onMounted, watch, computed } from 'vue';
+    import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
+    import { connect as connectSocket, disconnect as disconnectSocket, on as onSocket, off as offSocket } from '@/services/devices/deviceSocket';
     import { getLimitedDevices } from '@/services/devices/devices';   
     import { getTypeDevicesCounts } from '@/services/type devices/typeDevices';   
     import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
@@ -622,6 +623,31 @@
         console.log('CardNavbar ref:', deviceNav.value);
         await loadDevices();
         await loadTypeDevices();
+
+        // Socket connection (no auth)
+        connectSocket({
+            url: "http://localhost:3000"
+        });
+
+        // Refresh devices list when a device is updated
+        onSocket('devices:updated', async () => {
+            await loadDevices();
+        });
+
+        // Refresh device events when a new event is created
+        onSocket('deviceEvents:created', async (payload) => {
+            const currentDeviceId = selectedDeviceRow.value?.id;
+            if (!currentDeviceId) return;
+            if (!payload?.device_id || Number(payload.device_id) === Number(currentDeviceId)) {
+                await loadDeviceEvents();
+            }
+        });
+    });
+
+    onBeforeUnmount(() => {
+        offSocket('devices:updated');
+        offSocket('deviceEvents:created');
+        disconnectSocket();
     });
 
     // Watch pour réinitialiser le filtre si pas de device sélectionné
