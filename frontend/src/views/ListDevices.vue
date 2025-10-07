@@ -100,6 +100,7 @@
             x-label="Time"
             y-label="ms"
             height="300px"
+            :smooth=false
         />   
         <!-- Header -->
         <h4 class="events-section-title">Historic Events</h4>
@@ -222,12 +223,18 @@
     sortedEvents.value.map(r => r?.event_time ? formatDate(r.event_time, 'HH:mm:ss') : '')
     );
 
-    const chartSeries = computed(() => [
-    { name: 'AVG',  data: sortedEvents.value.map(r => Number(r?.avg ?? 0)) },
-    { name: 'MIN',  data: sortedEvents.value.map(r => Number(r?.min ?? 0)) },
-    { name: 'MAX',  data: sortedEvents.value.map(r => Number(r?.max ?? 0)) },
-    { name: 'LOSS', data: sortedEvents.value.map(r => Number(r?.loss ?? 0)) },
-    ]);
+    const chartSeries = computed(() => {
+        const threshold = Number( process.env.VITE_PING_LOSS_THRESHOLD || 10)
+        const length = sortedEvents.value.length
+        const thresholdLine = Array.from({ length }, () => threshold)
+        return [
+            { name: 'AVG',  data: sortedEvents.value.map(r => Number(r?.avg ?? 0)) },
+            { name: 'MIN',  data: sortedEvents.value.map(r => Number(r?.min ?? 0)) },
+            { name: 'MAX',  data: sortedEvents.value.map(r => Number(r?.max ?? 0)) },
+            { name: 'LOSS', data: sortedEvents.value.map(r => Number(r?.loss ?? 0)) },
+            { name: `UP THRESH (${threshold}%)`, data: thresholdLine }
+        ]
+    });
 
 
     const detailsColumns = ['device_id', 'hostname', 'sysName', 'snmp_disable', 'community', 'authlevel', 'authname', 'authalgo', 'snmpver'];
