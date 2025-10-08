@@ -142,11 +142,11 @@
         <!-- Grid -->
         <div v-if="eventsRows.length === 0" style="padding:8px 0;">No events</div>
         <AgGridModule
-        v-else
-        grid-id="device-events-modal-grid"
-        :column-defs="eventColumns"
-        :row-data="eventsRows"
-        row-selection="single"
+            v-else
+            grid-id="device-events-modal-grid"
+            :column-defs="eventColumns"
+            :row-data="eventsRows"
+            row-selection="single"
         />
 
         <div class="events-pagination" style="display:flex;gap:12px;justify-content:flex-end;padding-top:8px;">
@@ -206,7 +206,7 @@
 
     const eventColumns = ref([
       { headerName: 'Status', field: 'status', minWidth: 80 },
-      { headerName: 'Loss %', field: 'loss', minWidth: 80 },
+      { headerName: 'Loss %', field: 'loss', minWidth: 80, valueFormatter: params => params.value ?? 0 },
       { headerName: 'Avg', field: 'avg', minWidth: 80 },
       { headerName: 'Min', field: 'min', minWidth: 80 },
       { headerName: 'Max', field: 'max', minWidth: 80 },
