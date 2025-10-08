@@ -639,6 +639,7 @@
         // Refresh devices list when a device is updated
         onSocket('devices:updated', async () => {
             await loadDevices();
+            await loadTypeDevices();
         });
 
         // Refresh devices list on bulk update
