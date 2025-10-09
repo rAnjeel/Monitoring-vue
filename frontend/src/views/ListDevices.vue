@@ -636,16 +636,17 @@
             url: "http://localhost:3000"
         });
 
-        // Refresh devices list when a device is updated
-        onSocket('devices:updated', async () => {
-            await loadDevices();
-            await loadTypeDevices();
-        });
-
-        // Refresh devices list on bulk update
-        onSocket('devices:bulk_update', async () => {
-            await loadDevices();
-        });
+        // Debounced refresh to avoid hammering the API when many updates arrive
+        let refreshTimer = null
+        const triggerRefresh = () => {
+            if (refreshTimer) return
+            refreshTimer = setTimeout(async () => {
+                refreshTimer = null
+                await loadDevices();
+            }, 300)
+        }
+        onSocket('devices:updated', triggerRefresh);
+        onSocket('devices:bulk_update', triggerRefresh);
 
         // Refresh device events when a new event is created
         onSocket('deviceEvents:created', async (payload) => {
