@@ -8,14 +8,14 @@ export const connect = (options = {}) => {
 	const url = options.url || import.meta.env?.VITE_SOCKET_URL || window.location.origin
 	const path = options.path
 
-	socket = io(url, {
-		transports: ['websocket', 'polling'],
+    socket = io(url, {
+        transports: ['websocket'],
 		autoConnect: true,
 		reconnection: true,
 		reconnectionAttempts: Infinity,
-		reconnectionDelay: 500,
-		reconnectionDelayMax: 3000,
-		timeout: 10000,
+        reconnectionDelay: 200,
+        reconnectionDelayMax: 1500,
+        timeout: 8000,
 		...(path ? { path } : {}),
 		...(options.ioOptions || {})
 	})
