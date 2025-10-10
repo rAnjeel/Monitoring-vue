@@ -57,7 +57,11 @@ function onGridReady(params) {
   gridApi.value = params.api
 
   if (props.quickFilterText) {
-    gridApi.value.setQuickFilter(props.quickFilterText)
+    if (typeof gridApi.value.setQuickFilter === 'function') {
+      gridApi.value.setQuickFilter(props.quickFilterText)
+    } else if (typeof gridApi.value.setGridOption === 'function') {
+      gridApi.value.setGridOption('quickFilterText', props.quickFilterText)
+    }
   }
 
   // Appliquer manuellement Enter dans les filtres si besoin
@@ -74,7 +78,11 @@ function onGridReady(params) {
 
 watch(() => props.quickFilterText, (val) => {
   if (gridApi.value) {
-    gridApi.value.setQuickFilter(val || '')
+    if (typeof gridApi.value.setQuickFilter === 'function') {
+      gridApi.value.setQuickFilter(val || '')
+    } else if (typeof gridApi.value.setGridOption === 'function') {
+      gridApi.value.setGridOption('quickFilterText', val || '')
+    }
   }
 })
 
@@ -99,7 +107,12 @@ function onCellContextMenu(event) {
 
 defineExpose({
   setQuickFilter: (val) => {
-    if (gridApi.value) gridApi.value.setQuickFilter(val || '')
+    if (!gridApi.value) return
+    if (typeof gridApi.value.setQuickFilter === 'function') {
+      gridApi.value.setQuickFilter(val || '')
+    } else if (typeof gridApi.value.setGridOption === 'function') {
+      gridApi.value.setGridOption('quickFilterText', val || '')
+    }
   },
   setFilterModel: (val) => {
     if (gridApi.value) gridApi.value.setFilterModel(val || null)

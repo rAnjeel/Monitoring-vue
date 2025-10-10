@@ -514,31 +514,33 @@
     }
 
     async function handleDeviceSelect(device, index) {
-        selectedDevice.value = device;
-        const api = agGridRef.value?.getGridApi?.()
-        if (!device || index < 0) {
-            if (api) {
-                api.setFilterModel(null)
-                api.setQuickFilter('')
-                api.onFilterChanged?.()
+        const isSame = device && selectedDevice.value && selectedDevice.value.name === device.name
+        selectedDevice.value = isSame ? null : device
+
+        const gridComp = agGridRef.value
+        const api = gridComp?.getGridApi?.()
+        if (!selectedDevice.value || index < 0) {
+            if (gridComp) {
+                gridComp.setFilterModel(null)
+                gridComp.setQuickFilter('')
+                api?.onFilterChanged?.()
             }
             updateCountsFromGrid()
-            return;
+            return
         }
 
-        // Prefer column filter on 'type_device' when present; fallback to quick filter
         const hasTypeCol = (columns.value || []).some(col => col.field === 'type_device')
-        if (api && hasTypeCol) {
-            const current = api.getFilterModel?.() || {}
+        if (gridComp && hasTypeCol) {
+            const current = api?.getFilterModel?.() || {}
             const next = {
                 ...current,
-                type_device: { filterType: 'text', type: 'contains', filter: device.name }
+                type_device: { filterType: 'text', type: 'contains', filter: selectedDevice.value.name }
             }
-            api.setFilterModel(next)
-            api.onFilterChanged?.()
-        } else if (api) {
-            api.setQuickFilter(device.name || '')
-            api.onFilterChanged?.()
+            gridComp.setFilterModel(next)
+            api?.onFilterChanged?.()
+        } else if (gridComp) {
+            gridComp.setQuickFilter(selectedDevice.value.name || '')
+            api?.onFilterChanged?.()
         }
         updateCountsFromGrid()
     }
@@ -594,10 +596,10 @@
         }
     });
 
-    // Update total pages display when page size changes
-    watch(() => pageSize.value, () => {
-        totalPagesDisplay.value = Math.max(1, Math.ceil(totalCountDisplay.value / pageSize.value));
-    });
+    // // Update total pages display when page size changes
+    // watch(() => pageSize.value, () => {
+    //     totalPagesDisplay.value = Math.max(1, Math.ceil(totalCountDisplay.value / pageSize.value));
+    // });
 
     // Events pagination watchers remain server-based
     watch([() => eventsPage.value, () => eventsPageSize.value], async () => {
