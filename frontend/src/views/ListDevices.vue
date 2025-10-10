@@ -254,7 +254,6 @@
             label: 'Edit',
             icon: 'glyphicon glyphicon-pencil',
             action: (row) => {
-                // eslint-disable-next-line no-console
                 console.log('[Action] Edit row:', row);
             }
         },
@@ -263,7 +262,6 @@
             label: 'Delete',
             icon: 'glyphicon glyphicon-trash',
             action: (row) => {
-                // eslint-disable-next-line no-console
                 console.log('[Action] Delete row:', row);
             }
         },
