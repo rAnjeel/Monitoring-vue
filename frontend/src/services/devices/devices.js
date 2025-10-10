@@ -8,7 +8,6 @@ export async function getDevices({filter = {}} = {}) {
   try {
     console.log('[GetDevices] Début de la récupération des devices...', { filter })
     
-    // Ne pas envoyer de paramètre filter si il est vide, null ou undefined
     const params = {}
     if (filter && Object.keys(filter).length > 0) {
       params.filter = JSON.stringify(filter)
@@ -72,5 +71,18 @@ export async function getDevice(id) {
 
 export function createDevice(device) {
   return api.post('/devices', device)
+}
+
+export async function getCachedDevices() {
+  try {
+    const response = await api.get('/devices/cache')
+    const devices = Array.isArray(response.data?.devices) ? response.data.devices : []
+    console.log('[GetCachedDevices] Fetched', devices.length, 'devices from cache')
+    return devices
+  } catch (error) {
+    const msg = error?.response?.data?.message || error.message || 'Erreur inconnue'
+    console.error('[GetCachedDevices] Erreur:', msg)
+    throw new Error(`Impossible de charger les devices (cache): ${msg}`)
+  }
 }
 

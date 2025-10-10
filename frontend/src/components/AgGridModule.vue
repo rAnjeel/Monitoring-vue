@@ -10,6 +10,8 @@
       :rowMultiSelectWithClick="true"
       :suppressCellFocus="suppressCellFocus"
       :rowClassRules="rowClassRules"
+      :pagination="true"
+      :paginationPageSize="pageSize"
       @grid-ready="onGridReady"
       @filter-changed="onFilterChanged"
       @cell-context-menu="onCellContextMenu"
@@ -103,6 +105,11 @@ defineExpose({
     if (gridApi.value) gridApi.value.setFilterModel(val || null)
   },
   getFilterModel: () => gridApi.value ? gridApi.value.getFilterModel() : null,
+  setPageSize: (size) => {
+    if (gridApi.value && Number.isFinite(size)) {
+      gridApi.value.paginationSetPageSize(Number(size))
+    }
+  },
   getGridApi: () => gridApi.value
 })
 </script>

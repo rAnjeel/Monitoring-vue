@@ -33,15 +33,15 @@
                 <!-- Bloc gauche -->
                 <div class="col-md-6">
                 <label class="form-label">Show</label>
-                <select v-model.number="pageSize" class="form-control input-sm" style="display:inline-block;width:80px;margin:0 5px;">
+                <select v-model.number="pageSize" @change="onPageSizeChanged" class="form-control input-sm" style="display:inline-block;width:80px;margin:0 5px;">
                     <option :value="20">20</option>
                     <option :value="50">50</option>
                     <option :value="100">100</option>
                 </select>
                 <span style="margin-right:6px;">entries |</span>
                 <label class="form-label" style="margin-right:6px;">Go to page</label>
-                <input type="number" min="1" :max="totalPagesDisplay" v-model.number="targetPage" 
-                        @keyup.enter="jumpToPage" 
+                <input type="number" min="1" v-model.number="targetPage" 
+                        @change="jumpToPage" 
                         class="form-control input-sm" 
                         style="display:inline-block;width:80px;margin-right: 6px;" />
                 <span class="form-label">/ {{ totalPagesDisplay }}</span>
@@ -69,12 +69,10 @@
             grid-id="devices-grid"
             :column-defs="columns"
             :row-data="rows"
-            :filter-model="gridFilterModel"
             :row-class-rules="rowClassRules"
+            :page-size="pageSize"
             ref="agGridRef"
-            @filter-changed="onFilterChanged"
             @filter-apply="applyFilters"
-            @filter-reset="clearFilters"
             @cell-context-menu="onCellContextMenu"
             />
             <AgGridContextMenu :items="menuItems" />
@@ -142,11 +140,11 @@
         <!-- Grid -->
         <div v-if="eventsRows.length === 0" style="padding:8px 0;">No events</div>
         <AgGridModule
-            v-else
-            grid-id="device-events-modal-grid"
-            :column-defs="eventColumns"
-            :row-data="eventsRows"
-            row-selection="single"
+        v-else
+        grid-id="device-events-modal-grid"
+        :column-defs="eventColumns"
+        :row-data="eventsRows"
+        row-selection="single"
         />
 
         <div class="events-pagination" style="display:flex;gap:12px;justify-content:flex-end;padding-top:8px;">
@@ -167,7 +165,7 @@
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
     import { connect as connectSocket, disconnect as disconnectSocket, on as onSocket, off as offSocket } from '@/services/devices/deviceSocket';
-    import { getLimitedDevices } from '@/services/devices/devices';   
+    import { getCachedDevices } from '@/services/devices/devices';   
     import { getTypeDevicesCounts } from '@/services/type devices/typeDevices';   
     import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
     import AgGridContextMenu from '@/components/AgGridContextMenu.vue';
@@ -186,8 +184,8 @@
 
     const columns = ref([]);
     const rows = ref([]);
+    const allRows = ref([]);
     const pageSize = ref(20);
-    const gridFilterModel = ref(null);
     const agGridRef = ref(null);
     const targetPage = ref(1);
     const totalPagesDisplay = ref(1);
@@ -228,10 +226,10 @@
         const length = sortedEvents.value.length
         const thresholdLine = Array.from({ length }, () => threshold)
         return [
-            { name: 'AVG',  data: sortedEvents.value.map(r => Number(r?.avg ?? 0)) },
-            { name: 'MIN',  data: sortedEvents.value.map(r => Number(r?.min ?? 0)) },
-            { name: 'MAX',  data: sortedEvents.value.map(r => Number(r?.max ?? 0)) },
-            { name: 'LOSS', data: sortedEvents.value.map(r => Number(r?.loss ?? 0)) },
+    { name: 'AVG',  data: sortedEvents.value.map(r => Number(r?.avg ?? 0)) },
+    { name: 'MIN',  data: sortedEvents.value.map(r => Number(r?.min ?? 0)) },
+    { name: 'MAX',  data: sortedEvents.value.map(r => Number(r?.max ?? 0)) },
+    { name: 'LOSS', data: sortedEvents.value.map(r => Number(r?.loss ?? 0)) },
             { name: `UP THRESH (${threshold}%)`, data: thresholdLine }
         ]
     });
@@ -377,48 +375,6 @@
             }
     }
 
-
-    // Load data
-    async function loadDevices() {
-        // loading.value = true;
-        error.value = null;
-        try {
-            console.log('[LoadDevices] Début du chargement des devices...');
-            // Préparer le filtre à partir du modèle courant si disponible
-            let filter = {};
-            if (gridFilterModel.value && Object.keys(gridFilterModel.value).length > 0) {
-                filter = { ...gridFilterModel.value };
-            }
-            const { rows: data, totalCount: fetchedTotalCount } = await getLimitedDevices({
-                page: targetPage.value,
-                pageSize: pageSize.value,
-                filter,
-            });
-            console.log('Total devices:', fetchedTotalCount)
-
-            // Update the component's state
-            totalCountDisplay.value = fetchedTotalCount;
-            totalPagesDisplay.value = Math.max(1, Math.ceil(fetchedTotalCount / pageSize.value));
-            console.log('Total pages display:', totalPagesDisplay.value);
-            const devices = Array.isArray(data) ? data : (data && data.data ? data.data : []);
-
-            if (!Array.isArray(devices)) {
-                throw new Error('Réponse inattendue du service devices');
-            }
-
-            generateColumns(devices);
-
-            rows.value = devices;
-        } catch (err) {
-            error.value = err.message;
-            console.error('[LoadDevices] Erreur lors du chargement:', err);
-        } finally {
-            loading.value = false;
-            lastUpdated.value = new Date();
-        }
-    }
-
-    // Load device events for the selected device
     async function loadDeviceEvents() {
         const deviceId = selectedDeviceRow.value?.id;
         if (!deviceId) {
@@ -440,7 +396,6 @@
             eventsTargetPage.value = eventsPage.value;
             console.log('[DeviceEvents] Chargement des événements:', eventsRows.value);
         } catch (error) {
-            // eslint-disable-next-line no-console
             eventsRows.value = [];
             console.error('[DeviceEvents] Erreur lors du chargement:', error?.message || error );
         }
@@ -455,15 +410,13 @@
     function onEventsPageSizeChanged() {
         eventsPage.value = 1;
         eventsTargetPage.value = 1;
-        // Le watcher se chargera de recharger les données
     }
-
+    
     function changeEventsPage(p) {
         let page = Number(p) || 1;
         if (page < 1) page = 1;
         eventsPage.value = page;
-        eventsTargetPage.value = page; // Synchroniser l'input
-        // Le watcher se chargera de recharger les données
+        eventsTargetPage.value = page;
     }
 
     function jumpToEventsPage() {
@@ -471,7 +424,6 @@
         if (page < 1) page = 1;
         eventsPage.value = page;
         eventsTargetPage.value = page;
-        // Le watcher se chargera de recharger les données
     }
 
     async function loadTypeDevices() {
@@ -486,7 +438,6 @@
                 throw new Error('Réponse inattendue du service type devices');
             }
 
-            // data attendu du backend: [{ type_device_id, type_device, total_devices, down_devices }]
             customDevices.value = types.map(t => ({
                 name: t.type_device || t.name,
                 value: t.total_devices || 0,
@@ -501,109 +452,49 @@
         }
     }
 
-    // Gestion des événements
-    async function handleDeviceSelect(device, index) {
-        selectedDevice.value = device;
-        
-        if (device && index >= 0) {
-            console.log('Appareil sélectionné:', device.name, 'Index:', index);
-            
-            // Filtrer par type_device si la colonne existe
-            const filterModel = columns.value.some(col => col.field === 'type_device')
-                ? { type_device: { filter: device.name } }
-                : { key: { filter: device.name } };
 
-            // Appliquer via les hooks standard
-            onFilterChanged(filterModel);
-            await applyFilters();
+    // Load data
+    async function loadDevices() {
+        error.value = null;
+        loading.value = true;
+        try {
+            console.log('[LoadDevices] Loading cached devices...');
+            const devices = await getCachedDevices();
+
+            totalCountDisplay.value = Array.isArray(devices) ? devices.length : 0;
+            allRows.value = Array.isArray(devices) ? devices : [];
+
+            generateColumns(allRows.value);
+            rows.value = allRows.value;
+
+            totalPagesDisplay.value = Math.max(1, Math.ceil(totalCountDisplay.value / pageSize.value));
+        } catch (err) {
+            error.value = err.message;
+            console.error('[LoadDevices] Erreur lors du chargement:', err);
+        } finally {
+            loading.value = false;
+            lastUpdated.value = new Date();
+        }
+    }
+
+    function updateCountsFromGrid() {
+        const api = agGridRef.value?.getGridApi?.()
+        if (api && typeof api.getDisplayedRowCount === 'function') {
+            const displayed = api.getDisplayedRowCount()
+            totalCountDisplay.value = displayed
+            totalPagesDisplay.value = Math.max(1, Math.ceil(displayed / (Number(pageSize.value) || 20)))
         } else {
-            console.log('Appareil désélectionné');
-            const filterModel = null;
-            onFilterChanged(filterModel || {});
-            await applyFilters();
+            totalCountDisplay.value = rows.value?.length || 0
+            totalPagesDisplay.value = Math.max(1, Math.ceil(totalCountDisplay.value / (Number(pageSize.value) || 20)))
         }
     }
 
-    function handleNavigationChange(currentIndex, maxIndex) {
-        console.log('Navigation:', currentIndex, '/', maxIndex);
-    }
-
-    function onFilterChanged(filterModel) {
-        // Synchroniser AgGrid avec le modèle fourni (ou le vider si null)
-        if (agGridRef.value) {
-            agGridRef.value.setFilterModel(filterModel || null);
+    function onPageSizeChanged() {
+        const grid = agGridRef.value?.getGridApi?.()
+        if (grid && typeof grid.paginationSetPageSize === 'function') {
+            grid.paginationSetPageSize(Number(pageSize.value) || 20)
         }
-
-        // Si pas de modèle, on efface le filtre côté backend
-        if (!filterModel || Object.keys(filterModel).length === 0) {
-            console.log('[onFilterChanged] Aucun filtre, réinitialisation.');
-            gridFilterModel.value = null;
-            return;
-        }
-
-        // Convertir le modèle de filtre AgGrid en format compatible avec le backend
-        const filter = {};
-        for (const key in filterModel) {
-            const f = filterModel[key];
-            if (f && typeof f === 'object' && 'filter' in f && f.filter !== undefined && f.filter !== null && f.filter !== '') {
-                filter[key] = f.filter;
-            }
-        }
-
-        const newFilter = Object.keys(filter).length > 0 ? filter : null;
-        console.log('[onFilterChanged] Filtre synchronisé:', newFilter);
-        gridFilterModel.value = newFilter;
-    }
-
-
-    // Appliquer les filtres manuellement
-    async function applyFilters() {
-        if (!agGridRef.value) {
-            console.log('[ApplyFilters] AgGrid ref non disponible');
-            return;
-        }
-
-        // Récupérer le filtre actuel depuis AgGrid
-        const currentFilterModel = agGridRef.value.getFilterModel();
-        console.log('[ApplyFilters] Filtre actuel depuis AgGrid:', currentFilterModel);
-
-        // Convertir le modèle de filtre AgGrid en format compatible avec le backend
-        const filterFromGrid = {};
-        for (const key in currentFilterModel) {
-            const f = currentFilterModel[key];
-            if (f && f.filter !== undefined && f.filter !== null && f.filter !== '') {
-                filterFromGrid[key] = f.filter;
-            }
-        }
-
-        // Fusionner avec le filtre externe (ex: 'key' global) éventuellement défini par handleDeviceSelect
-        const externalFilter = gridFilterModel.value && typeof gridFilterModel.value === 'object' ? gridFilterModel.value : {};
-        const mergedFilter = { ...externalFilter, ...filterFromGrid };
-
-        const finalFilter = Object.keys(mergedFilter).length > 0 ? mergedFilter : null;
-        console.log('[ApplyFilters] Application des filtres (fusion):', finalFilter);
-
-        gridFilterModel.value = finalFilter;
-
-        // Recharger avec pagination et filtre
-        await loadDevices();
-    }
-
-    // Effacer tous les filtres
-    async function clearFilters() {
-        console.log('[ClearFilters] Effacement des filtres...');
-        gridFilterModel.value = null;
-        if (agGridRef.value) {
-            agGridRef.value.setFilterModel(null);
-        }
-        await loadDevices();
-    }
-
-    // Bouton reload
-    async function reloadGrid() {
-        console.log('[ReloadGrid] Rechargement des données...');
-        await loadDevices();
-        await loadTypeDevices();
+        updateCountsFromGrid()
     }
 
     function jumpToPage() {
@@ -612,10 +503,47 @@
         if (page < 1) page = 1;
         if (page > total) page = total;
         targetPage.value = page;
+        const grid = agGridRef.value?.getGridApi?.()
+        if (grid && typeof grid.paginationGoToPage === 'function') {
+            grid.paginationGoToPage(page - 1)
+        }
+    }
+
+    function applyFilters() {
+        updateCountsFromGrid()
+    }
+
+    async function handleDeviceSelect(device, index) {
+        selectedDevice.value = device;
+        const api = agGridRef.value?.getGridApi?.()
+        if (!device || index < 0) {
+            if (api) {
+                api.setFilterModel(null)
+                api.setQuickFilter('')
+                api.onFilterChanged?.()
+            }
+            updateCountsFromGrid()
+            return;
+        }
+
+        // Prefer column filter on 'type_device' when present; fallback to quick filter
+        const hasTypeCol = (columns.value || []).some(col => col.field === 'type_device')
+        if (api && hasTypeCol) {
+            const current = api.getFilterModel?.() || {}
+            const next = {
+                ...current,
+                type_device: { filterType: 'text', type: 'contains', filter: device.name }
+            }
+            api.setFilterModel(next)
+            api.onFilterChanged?.()
+        } else if (api) {
+            api.setQuickFilter(device.name || '')
+            api.onFilterChanged?.()
+        }
+        updateCountsFromGrid()
     }
 
     function onCellContextMenu(event) {
-        // Blocage du menu natif pour utiliser notre menu personnalisé
         if (event && event.event && typeof event.event.preventDefault === 'function') {
             event.event.preventDefault();
         }
@@ -625,29 +553,26 @@
         MenuModule.showMenu({ x, y, rowData });
     }
 
-    
     onMounted(async () => {
+        console.log('[Socket] gridApi:', agGridRef.value.getGridApi?.());
         console.log('CardNavbar ref:', deviceNav.value);
         await loadDevices();
         await loadTypeDevices();
 
-        // Socket connection (no auth)
         connectSocket({
             url: "http://localhost:3000"
         });
 
-        // Refresh devices list when a device is updated
-        onSocket('devices:updated', async () => {
-            await loadDevices();
-            await loadTypeDevices();
-        });
+        const handleBulkUpdate = async (ids) => {
+            try {
+                console.log('[Socket] devices:bulk_update ids:', ids)
+                await loadDevices()
+            } catch (e) {
+                console.error('[BulkUpdate] reload failed:', e?.message || e)
+            }
+        }
+        onSocket('devices:bulk_update', handleBulkUpdate)
 
-        // Refresh devices list on bulk update
-        onSocket('devices:bulk_update', async () => {
-            await loadDevices();
-        });
-
-        // Refresh device events when a new event is created
         onSocket('deviceEvents:created', async (payload) => {
             const currentDeviceId = selectedDeviceRow.value?.id;
             if (!currentDeviceId) return;
@@ -658,24 +583,23 @@
     });
 
     onBeforeUnmount(() => {
-        offSocket('devices:updated');
-        offSocket('deviceEvents:created');
+        offSocket('devices:bulk_update');
         disconnectSocket();
     });
 
-    // Watcher pour la sélection d'un device
+    // Watchers no longer trigger server fetch; keep for UI reactions
     watch(selectedDevice, (newDevice) => {
         if (!newDevice) {
-            gridFilterModel.value = null;
+            // clear external filter reference
         }
     });
 
-    // Watcher pour la pagination des devices
-    watch([() => targetPage.value, () => pageSize.value], async () => {
-        await loadDevices();
+    // Update total pages display when page size changes
+    watch(() => pageSize.value, () => {
+        totalPagesDisplay.value = Math.max(1, Math.ceil(totalCountDisplay.value / pageSize.value));
     });
 
-    // Watcher pour la pagination des historiques
+    // Events pagination watchers remain server-based
     watch([() => eventsPage.value, () => eventsPageSize.value], async () => {
         if (selectedDeviceRow.value?.id) {
             await loadDeviceEvents();
