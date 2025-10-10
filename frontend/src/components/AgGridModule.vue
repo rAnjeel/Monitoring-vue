@@ -102,7 +102,8 @@ defineExpose({
   setFilterModel: (val) => {
     if (gridApi.value) gridApi.value.setFilterModel(val || null)
   },
-  getFilterModel: () => gridApi.value ? gridApi.value.getFilterModel() : null
+  getFilterModel: () => gridApi.value ? gridApi.value.getFilterModel() : null,
+  getGridApi: () => gridApi.value
 })
 </script>
 
