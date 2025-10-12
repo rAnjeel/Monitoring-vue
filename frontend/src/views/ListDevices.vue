@@ -34,7 +34,7 @@
                 <div class="col-md-6">
                 <label class="form-label">Show</label>
                 <select v-model.number="pageSize" class="form-control input-sm" style="display:inline-block;width:80px;margin:0 5px;">
-                    <option :value="20">20</option>
+                    <option :value="10">10</option>
                     <option :value="50">50</option>
                     <option :value="100">100</option>
                 </select>
@@ -183,10 +183,11 @@
     const loading = ref(false);
     const error = ref(null);
     const lastUpdated = ref(null);
+    const lastSocketUpdate = ref(null);
 
     const columns = ref([]);
     const rows = ref([]);
-    const pageSize = ref(20);
+    const pageSize = ref(10);
     const gridFilterModel = ref(null);
     const agGridRef = ref(null);
     const targetPage = ref(1);
@@ -380,7 +381,12 @@
 
     // Load data
     async function loadDevices() {
-        // loading.value = true;
+        // Éviter les appels simultanés
+        if (loading.value) {
+            console.log('[LoadDevices] Déjà en cours de chargement, ignoré');
+            return;
+        }
+        loading.value = true;
         error.value = null;
         try {
             console.log('[LoadDevices] Début du chargement des devices...');
@@ -492,6 +498,20 @@
                 value: t.total_devices || 0,
                 length: t.down_devices || 0,
             }));
+
+            // Sélectionner automatiquement le "router" par défaut
+            const routerDevice = customDevices.value.find(device => 
+                device.name && device.name.toLowerCase().includes('router')
+            );
+            if (routerDevice) {
+                selectedDevice.value = routerDevice;
+                // Appliquer le filtre pour le router
+                const filterModel = columns.value.some(col => col.field === 'type_device')
+                    ? { type_device: { filter: routerDevice.name } }
+                    : { key: { filter: routerDevice.name } };
+                onFilterChanged(filterModel);
+                await applyFilters();
+            }
         } catch (err) {
             error.value = err.message;
             console.error('[LoadTypeDevices] Erreur lors du chargement:', err);
@@ -503,25 +523,23 @@
 
     // Gestion des événements
     async function handleDeviceSelect(device, index) {
-        selectedDevice.value = device;
-        
-        if (device && index >= 0) {
-            console.log('Appareil sélectionné:', device.name, 'Index:', index);
-            
-            // Filtrer par type_device si la colonne existe
-            const filterModel = columns.value.some(col => col.field === 'type_device')
-                ? { type_device: { filter: device.name } }
-                : { key: { filter: device.name } };
-
-            // Appliquer via les hooks standard
-            onFilterChanged(filterModel);
-            await applyFilters();
-        } else {
-            console.log('Appareil désélectionné');
-            const filterModel = null;
-            onFilterChanged(filterModel || {});
-            await applyFilters();
+        // Ne pas permettre la désélection complète
+        if (!device || index < 0) {
+            console.log('Sélection de device invalide, ignorée');
+            return;
         }
+        
+        selectedDevice.value = device;
+        console.log('Appareil sélectionné:', device.name, 'Index:', index);
+        
+        // Filtrer par type_device si la colonne existe
+        const filterModel = columns.value.some(col => col.field === 'type_device')
+            ? { type_device: { filter: device.name } }
+            : { key: { filter: device.name } };
+
+        // Appliquer via les hooks standard
+        onFilterChanged(filterModel);
+        await applyFilters();
     }
 
     function handleNavigationChange(currentIndex, maxIndex) {
@@ -563,6 +581,12 @@
             return;
         }
 
+        // Vérifier qu'au moins un device est sélectionné
+        if (!selectedDevice.value) {
+            console.log('[ApplyFilters] Aucun device sélectionné, impossible d\'appliquer les filtres');
+            return;
+        }
+
         // Récupérer le filtre actuel depuis AgGrid
         const currentFilterModel = agGridRef.value.getFilterModel();
         console.log('[ApplyFilters] Filtre actuel depuis AgGrid:', currentFilterModel);
@@ -576,12 +600,23 @@
             }
         }
 
-        // Fusionner avec le filtre externe (ex: 'key' global) éventuellement défini par handleDeviceSelect
-        const externalFilter = gridFilterModel.value && typeof gridFilterModel.value === 'object' ? gridFilterModel.value : {};
-        const mergedFilter = { ...externalFilter, ...filterFromGrid };
+        // Utiliser uniquement le filtre du device sélectionné (pas de fusion)
+        const deviceFilter = columns.value.some(col => col.field === 'type_device')
+            ? { type_device: { filter: selectedDevice.value.name } }
+            : { key: { filter: selectedDevice.value.name } };
 
-        const finalFilter = Object.keys(mergedFilter).length > 0 ? mergedFilter : null;
-        console.log('[ApplyFilters] Application des filtres (fusion):', finalFilter);
+        // Convertir le filtre du device en format backend
+        const deviceFilterBackend = {};
+        for (const key in deviceFilter) {
+            const f = deviceFilter[key];
+            if (f && f.filter !== undefined && f.filter !== null && f.filter !== '') {
+                deviceFilterBackend[key] = f.filter;
+            }
+        }
+
+        // Combiner le filtre du device avec les filtres de la grille (sans fusion externe)
+        const finalFilter = { ...deviceFilterBackend, ...filterFromGrid };
+        console.log('[ApplyFilters] Application des filtres (device + grille):', finalFilter);
 
         gridFilterModel.value = finalFilter;
 
@@ -592,6 +627,13 @@
     // Effacer tous les filtres
     async function clearFilters() {
         console.log('[ClearFilters] Effacement des filtres...');
+        
+        // Vérifier qu'au moins un device est sélectionné
+        if (!selectedDevice.value) {
+            console.log('[ClearFilters] Aucun device sélectionné, impossible d\'effacer les filtres');
+            return;
+        }
+        
         gridFilterModel.value = null;
         if (agGridRef.value) {
             agGridRef.value.setFilterModel(null);
@@ -628,22 +670,24 @@
     
     onMounted(async () => {
         console.log('CardNavbar ref:', deviceNav.value);
-        await loadDevices();
         await loadTypeDevices();
+        await loadDevices();
 
         // Socket connection (no auth)
         connectSocket({
             url: "http://localhost:3000"
         });
 
-        // Refresh devices list when a device is updated
-        onSocket('devices:updated', async () => {
-            await loadDevices();
-            await loadTypeDevices();
-        });
-
-        // Refresh devices list on bulk update
-        onSocket('devices:bulk_update', async () => {
+        // Refresh devices list on bulk update (avec protection contre les appels trop fréquents)
+        onSocket('devices:bulk_update', async (updates) => {
+            const now = Date.now();
+            // Éviter les appels trop fréquents (minimum 1 seconde entre les appels)
+            if (lastSocketUpdate.value && (now - lastSocketUpdate.value) < 1000) {
+                console.log('[Socket] Ignore bulk_update (trop fréquent)');
+                return;
+            }
+            lastSocketUpdate.value = now;
+            console.log('[Socket] Bulk update reçu:', updates?.length || 0, 'devices');
             await loadDevices();
         });
 
@@ -661,13 +705,6 @@
         offSocket('devices:updated');
         offSocket('deviceEvents:created');
         disconnectSocket();
-    });
-
-    // Watcher pour la sélection d'un device
-    watch(selectedDevice, (newDevice) => {
-        if (!newDevice) {
-            gridFilterModel.value = null;
-        }
     });
 
     // Watcher pour la pagination des devices

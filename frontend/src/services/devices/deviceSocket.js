@@ -50,8 +50,8 @@ export const emit = (eventName, payload, ack) => {
 	socket.emit(eventName, payload)
 }
 
-// Convenience helpers for the monitoring flow
-export const onMonitoringUpdate = (handler) => on('monitoring:update', handler)
-export const offMonitoringUpdate = (handler) => off('monitoring:update', handler)
+// // Convenience helpers for the monitoring flow
+// export const onMonitoringUpdate = (handler) => on('monitoring:update', handler)
+// export const offMonitoringUpdate = (handler) => off('monitoring:update', handler)
 
 

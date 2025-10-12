@@ -112,14 +112,12 @@
   }
 
   function selectDevice(index) {
-    // Toggle selection: if already selected, deselect; otherwise select
-    if (selectedIndex.value === index) {
-      selectedIndex.value = -1; // Deselect
-      emit('device-selected', null, -1);
-    } else {
-      selectedIndex.value = index;
-      emit('device-selected', itemsResolved.value[index], index);
-    }
+    selectedIndex.value = index;
+    emit('device-selected', itemsResolved.value[index], index);
+    // if (selectedIndex.value === index) {
+    //   selectedIndex.value = -1; // Deselect
+    //   emit('device-selected', null, -1);
+    // } 
   }
 
   // Méthode pour mettre à jour les données d'un device
