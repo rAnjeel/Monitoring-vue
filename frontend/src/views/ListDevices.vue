@@ -679,7 +679,7 @@
         });
 
         // Refresh devices list on bulk update (avec protection contre les appels trop fréquents)
-        onSocket('devices:bulk_update', async (updates) => {
+        onSocket('devices:bulk_update', async () => {
             const now = Date.now();
             // Éviter les appels trop fréquents (minimum 1 seconde entre les appels)
             if (lastSocketUpdate.value && (now - lastSocketUpdate.value) < 1000) {
@@ -687,7 +687,6 @@
                 return;
             }
             lastSocketUpdate.value = now;
-            console.log('[Socket] Bulk update reçu:', updates?.length || 0, 'devices');
             await loadDevices();
         });
 
