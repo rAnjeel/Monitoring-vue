@@ -2,11 +2,11 @@
   <div class="list-ports-page">
     <div class="sub-navbar">
         <div class="nav nav-tabs">
-            <h4 class="text-uppercase" style="color:#ecf0f1;">
+            <h5 class="text-uppercase" style="color:#ecf0f1;">
                 <span class="glyphicon glyphicon-triangle-right" aria-hidden="true" style="margin-right: 6px;"></span>
                 <span>Ports List</span>
                 <span class="label label-primary" title="Total ports">{{ totalCountDisplay }}</span>
-            </h4>
+            </h5>
         </div>
     </div>
 
