@@ -122,7 +122,7 @@
 
     // Générer dynamiquement les colonnes en s'inspirant de ListDevices.vue
     function generateColumns(portsData) {
-        const columnsToHide = ['ne_id', 'device_id', 'hostname', 'sysName', 'sysname', 'adminStatus', 'operStatus', 'port_id', 'mtu', 'HighSpeed', 'PromiscuousMode', 'ConnectorPresent'];
+        const columnsToHide = ['ifIndex', 'ne_id', 'device_id', 'hostname', 'sysName', 'sysname', 'adminStatus', 'operStatus', 'port_id', 'mtu', 'HighSpeed', 'PromiscuousMode', 'ConnectorPresent', 'in_octets', 'out_octets', 'Speed'];
 
         const sample = (Array.isArray(portsData) && portsData.length > 0) ? portsData[0] : {};
         const keys = Object.keys(sample || {});
@@ -172,6 +172,30 @@
                     cellRenderer: (params) => {
                         const value = params.data?.operStatus;
                         return value ? badgeContainer(String(value).toUpperCase()) : '';
+                    }
+                },
+                {
+                    headerName: 'SPEED',
+                    colId: 'Speed',
+                    cellRenderer: (params) => {
+                        const value = params.data?.Speed;
+                        return value;
+                    }
+                },
+                {
+                    headerName: 'INOCTETS',
+                    colId: 'inOctets',
+                    cellRenderer: (params) => {
+                        const value = params.data?.in_octets;
+                        return value;
+                    }
+                },
+                {
+                    headerName: 'OUTOCTETS',
+                    colId: 'outOctets',
+                    cellRenderer: (params) => {
+                        const value = params.data?.out_octets;
+                        return value;
                     }
                 },
             ];
