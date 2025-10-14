@@ -71,6 +71,77 @@
         </div>
     </div>
     <CsvImport v-model="showImportPorts" :import-type="'ports'" @import="reloadGrid" />
+
+    <!-- Port Events Modal -->
+    <ModalComponent
+      v-model="showEventsModal"
+      :title="`Port events - ${selectedPortRow?.hostname || ''} / port ${selectedPortRow?.name || selectedPortRow?.ifName || ''}`"
+      :width="'min(1000px, 96vw)'"
+    >
+      <div class="device-details-block">
+        <DetailsComponent :data="hiddenDetails" :max-lines="5" />
+      </div>
+
+      <h4 class="events-section-title">Historic Port Events</h4>
+
+      <eChartComponent
+        :x="eventsChartX"
+        :y="chartSeries"
+        title="Traffic"
+        x-label="Time"
+        y-label="Octets"
+        height="300px"
+        :smooth=false
+      />
+
+      <div class="events-toolbar" style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
+        <label>Start
+          <input type="datetime-local" v-model="eventsStartDate" @change="onEventsFilterChanged" />
+        </label>
+        <label>End
+          <input type="datetime-local" v-model="eventsEndDate" @change="onEventsFilterChanged" />
+        </label>
+        <label>Page size
+          <select v-model.number="eventsPageSize" @change="onEventsPageSizeChanged">
+            <option :value="10">10</option>
+            <option :value="20">20</option>
+            <option :value="50">50</option>
+          </select>
+        </label>
+        <label>Status
+          <select v-model="eventsStatus" @change="onEventsFilterChanged">
+            <option value="">All</option>
+            <option value="up">Up</option>
+            <option value="down">Down</option>
+          </select>
+        </label>
+        <label>Go to page
+          <input type="number" min="1" v-model.number="eventsTargetPage"
+                 @keyup.enter="jumpToEventsPage"
+                 class="form-control input-sm"
+                 style="display:inline-block;width:80px;margin-left:4px;" />
+        </label>
+        <button @click="loadPortEvents" class="btn btn-sm btn-primary" :disabled="loading">
+          <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
+          Reload
+        </button>
+      </div>
+
+      <div v-if="eventsRows.length === 0" style="padding:8px 0;">No events</div>
+      <AgGridModule
+        v-else
+        grid-id="port-events-modal-grid"
+        :column-defs="eventColumns"
+        :row-data="eventsRows"
+        row-selection="single"
+      />
+
+      <div class="events-pagination" style="display:flex;gap:12px;justify-content:flex-end;padding-top:8px;">
+        <button :disabled="eventsPage <= 1" @click="changeEventsPage(eventsPage - 1)">Prev</button>
+        <span>Page {{ eventsPage }} {{ eventsHasNextPage ? '+' : '' }}</span>
+        <button :disabled="!eventsHasNextPage" @click="changeEventsPage(eventsPage + 1)">Next</button>
+      </div>
+    </ModalComponent>
   </div>
 </template>
 
@@ -79,11 +150,15 @@
     import '@/assets/ListPorts.css';
     import '@/assets/Loading.css';
     import AgGridModule from '@/components/AgGridModule.vue';
-    import { ref, onMounted, watch } from 'vue';
+    import { ref, onMounted, watch, computed } from 'vue';
     import { getLimitedPorts } from '@/services/ports/ports';
-    import { badgeContainer, superposeValue} from '@/services/utils/utils';
+    import { badgeContainer, superposeValue, formatDate } from '@/services/utils/utils';
     import AgGridContextMenu from '@/components/AgGridContextMenu.vue';
     import MenuModule from '@/modules/AgGridModule';
+    import ModalComponent from '@/components/ModalComponent.vue';
+    import DetailsComponent from '@/components/DetailsComponent.vue';
+    import { getPortEventsByPortId } from '@/services/ports/portEvents';
+    import eChartComponent from '@/components/eChartComponent.vue';
 
 
     const loading = ref(false);
@@ -99,14 +174,49 @@
     const totalPagesDisplay = ref(1);
     const totalCountDisplay = ref(0);
     const showImportPorts = ref(false);
+    const showEventsModal = ref(false);
+    const selectedPortRow = ref(null);
+    const eventsRows = ref([]);
+    const eventsPage = ref(1);
+    const eventsPageSize = ref(20);
+    const eventsStartDate = ref('');
+    const eventsEndDate = ref('');
+    const eventsStatus = ref('');
+    const eventsHasNextPage = ref(false);
+    const eventsTargetPage = ref(1);
+
+    const eventColumns = ref([
+      { headerName: 'Status', field: 'status', minWidth: 80 },
+      { headerName: 'InOctets', field: 'ifInOctets', minWidth: 100 },
+      { headerName: 'OutOctets', field: 'ifOutOctets', minWidth: 100 },
+      { headerName: 'Date', field: 'event_time', minWidth: 180 },
+    ]);
+
+    // Données pour le graphique des événements (x: event_time, y: ifInOctets/ifOutOctets)
+    const sortedEvents = computed(() =>
+      (eventsRows.value || []).slice().sort((a, b) => new Date(a.event_time) - new Date(b.event_time))
+    );
+
+    const eventsChartX = computed(() =>
+      sortedEvents.value.map(r => r?.event_time ? formatDate(r.event_time, 'HH:mm:ss') : '')
+    );
+
+    const chartSeries = computed(() => {
+      return [
+        { name: 'InOctets', data: sortedEvents.value.map(r => Number(r?.ifInOctets ?? 0)) },
+        { name: 'OutOctets', data: sortedEvents.value.map(r => Number(r?.ifOutOctets ?? 0)) }
+      ]
+    });
     const menuItems = ref([
         {
             id: 'details',
             label: 'Details',
             icon: 'glyphicon glyphicon-list-alt',
-            action: (row) => {
-                // eslint-disable-next-line no-console
-                console.log('[Ports] Details:', row);
+            action: async (row) => {
+                selectedPortRow.value = row;
+                eventsPage.value = 1;
+                await loadPortEvents();
+                showEventsModal.value = true;
             }
         },
         {
@@ -246,6 +356,70 @@
         await loadPorts();
     }
 
+    const detailsColumns = ['device_id', 'hostname', 'sysName', 'ifName', 'ifDescr', 'ifAlias', 'ifIndex', 'ifType', 'ifOperStatus', 'ifAdminStatus'];
+    const hiddenDetails = computed(() => {
+      const row = selectedPortRow.value || null;
+      if (!row || typeof row !== 'object') return {};
+      const result = {};
+      for (const key of detailsColumns) {
+        if (Object.prototype.hasOwnProperty.call(row, key)) {
+          result[key] = row[key];
+        }
+      }
+      return result;
+    });
+
+    async function loadPortEvents() {
+      const portId = selectedPortRow.value?.port_id;
+      if (!portId) {
+        eventsRows.value = [];
+        return;
+      }
+      try {
+        const { rows, page, pageSize, hasNextPage } = await getPortEventsByPortId(portId, {
+          page: eventsPage.value,
+          pageSize: eventsPageSize.value,
+          status: eventsStatus.value || undefined,
+          start_date: eventsStartDate.value || undefined,
+          end_date: eventsEndDate.value || undefined,
+        });
+        eventsRows.value = rows || [];
+        eventsHasNextPage.value = hasNextPage || false;
+        eventsPage.value = page || 1;
+        eventsPageSize.value = pageSize || 20;
+        eventsTargetPage.value = eventsPage.value;
+      } catch (error) {
+        eventsRows.value = [];
+        // eslint-disable-next-line no-console
+        console.error('[PortEvents] Erreur lors du chargement:', error?.message || error );
+      }
+    }
+
+    function onEventsFilterChanged() {
+      eventsPage.value = 1;
+      eventsTargetPage.value = 1;
+      loadPortEvents();
+    }
+
+    function onEventsPageSizeChanged() {
+      eventsPage.value = 1;
+      eventsTargetPage.value = 1;
+    }
+
+    function changeEventsPage(p) {
+      let page = Number(p) || 1;
+      if (page < 1) page = 1;
+      eventsPage.value = page;
+      eventsTargetPage.value = page;
+    }
+
+    function jumpToEventsPage() {
+      let page = Number(eventsTargetPage.value) || 1;
+      if (page < 1) page = 1;
+      eventsPage.value = page;
+      eventsTargetPage.value = page;
+    }
+
     function jumpToPage() {
         const total = Number(totalPagesDisplay.value) || 1;
         let page = Number(targetPage.value) || 1;
@@ -264,7 +438,6 @@
         MenuModule.showMenu({ x, y, rowData });
     }
 
-    // --- Helpers robustes pour interagir avec le wrapper / api ag-grid ---
     function getGridApi() {
     if (!agGridRef.value) return null;
     return agGridRef.value.api || agGridRef.value.gridApi || (agGridRef.value.getApi && agGridRef.value.getApi()) || null;
@@ -285,18 +458,14 @@
     function setGridFilterModel(model) {
     try {
         if (!agGridRef.value) return;
-        // Wrapper method if present
         if (typeof agGridRef.value.setFilterModel === 'function') {
         agGridRef.value.setFilterModel(model);
         }
-        // Underlying grid API if present
         const api = getGridApi();
         if (api && typeof api.setFilterModel === 'function') {
         api.setFilterModel(model);
-        // ensure UI is refreshed
         api.onFilterChanged && api.onFilterChanged();
         api.refreshFilters && api.refreshFilters();
-        // For client-side row model
         api.refreshClientSideRowModel && api.refreshClientSideRowModel('filter');
         }
     } catch (e) {
@@ -304,9 +473,7 @@
     }
     }
 
-    // --- onFilterChanged : ne renvoie plus le model dans le grid (évite la boucle) ---
     function onFilterChanged(filterModel) {
-    // Convertir le filterModel ag-grid en format backend (simple: prendre .filter ou .values)
     if (!filterModel || Object.keys(filterModel).length === 0) {
         gridFilterModel.value = null;
         return;
@@ -316,23 +483,19 @@
     for (const key in filterModel) {
         const f = filterModel[key];
         if (!f) continue;
-        // text filter
         if (f.filter !== undefined && f.filter !== null && f.filter !== '') {
         mapped[key] = f.filter;
         continue;
         }
-        // set filter (values)
         if (Array.isArray(f.values) && f.values.length > 0) {
         mapped[key] = f.values;
         continue;
         }
-        // range / other types can be added if needed
     }
 
     gridFilterModel.value = Object.keys(mapped).length > 0 ? mapped : null;
     }
 
-    // --- applyFilters : utilise le helper pour lire le modèle actuel, construit le filter backend et recharge ---
     async function applyFilters() {
     if (!agGridRef.value) {
         console.log('[ApplyFilters Ports] AgGrid ref non disponible');
@@ -356,53 +519,42 @@
     const externalFilter = gridFilterModel.value && typeof gridFilterModel.value === 'object' ? gridFilterModel.value : {};
     const mergedFilter = { ...externalFilter, ...filterFromGrid };
     gridFilterModel.value = Object.keys(mergedFilter).length > 0 ? mergedFilter : null;
-
-    // retourner à la page 1 et charger
     targetPage.value = 1;
     await loadPorts();
     }
 
-    // --- clearFilters : vide le modèle interne, force la grid UI à se réinitialiser et recharge les données ---
     async function clearFilters() {
-    console.log('[ClearFilters Ports] Effacement des filtres...');
+        console.log('[ClearFilters Ports] Effacement des filtres...');
+        gridFilterModel.value = null;
+        targetPage.value = 1;
+        setGridFilterModel(null);
 
-    // Reset backend filter state
-    gridFilterModel.value = null;
-    targetPage.value = 1;
-
-    // Force clear côté Ag-Grid (wrapper + api)
-    setGridFilterModel(null);
-
-    // En plus, tenter de vider individuellement les instances de filtre (sécurise l'UI)
-    try {
-        const api = getGridApi();
-        if (api && typeof api.getFilterModel === 'function') {
-        const curr = api.getFilterModel() || {};
-        for (const colId of Object.keys(curr)) {
-            try {
-            const inst = api.getFilterInstance && api.getFilterInstance(colId);
-            if (inst && typeof inst.setModel === 'function') {
-                inst.setModel(null);
+        try {
+            const api = getGridApi();
+            if (api && typeof api.getFilterModel === 'function') {
+            const curr = api.getFilterModel() || {};
+            for (const colId of Object.keys(curr)) {
+                try {
+                const inst = api.getFilterInstance && api.getFilterInstance(colId);
+                if (inst && typeof inst.setModel === 'function') {
+                    inst.setModel(null);
+                }
+                } catch (inner) {
+                // ignore per-filter errors
+                }
             }
-            } catch (inner) {
-            // ignore per-filter errors
+            api.setFilterModel && api.setFilterModel(null);
+            api.onFilterChanged && api.onFilterChanged();
+            api.refreshFilters && api.refreshFilters();
             }
+        } catch (e) {
+            console.warn('clearFilters: erreur en forçant reset ag-grid', e);
         }
-        api.setFilterModel && api.setFilterModel(null);
-        api.onFilterChanged && api.onFilterChanged();
-        api.refreshFilters && api.refreshFilters();
+
+        if (agGridRef.value && typeof agGridRef.value.setFilterModel === 'function') {
+            try { agGridRef.value.setFilterModel(null); } catch (e) { /* noop */ }
         }
-    } catch (e) {
-        console.warn('clearFilters: erreur en forçant reset ag-grid', e);
-    }
-
-    // S'assurer que la référence wrapper (si elle garde un model interne) soit aussi vidée
-    if (agGridRef.value && typeof agGridRef.value.setFilterModel === 'function') {
-        try { agGridRef.value.setFilterModel(null); } catch (e) { /* noop */ }
-    }
-
-    // Recharger les données
-    await loadPorts();
+        await loadPorts();
     }
 
 
@@ -411,7 +563,6 @@
     });
 
     watch([() => targetPage.value, () => pageSize.value], async () => {
-     // Rechargez les données si la page ou la taille de page change
         await loadPorts();
     });
 
