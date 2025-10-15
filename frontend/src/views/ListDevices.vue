@@ -91,8 +91,18 @@
     >
         <!-- Détails des champs masqués de l'équipement sélectionné -->
         <div class="device-details-block">
-            <DetailsComponent :data="hiddenDetails" :max-lines="5" />
+            <DetailsComponent :data="hiddenDetails" />
         </div>
+        <!-- Cards grid (modular) -->
+        <CardModalComponent
+            title="All ports"
+            :data="portsCards"
+            toggle-label="Monitoring"
+            @toggle="onToggleItem"
+            @action="onActionItem"
+        />
+
+        <h3 class="events-section-title">Ping results variations</h3>
         <eChartComponent
             :x="eventsChartX"
             :y="chartSeries"
@@ -101,9 +111,9 @@
             y-label="ms"
             height="300px"
             :smooth=false
-        />   
-        <!-- Header -->
-        <h4 class="events-section-title">Historic Events</h4>
+        />
+
+        <h3 class="events-section-title">Historic Events</h3>
 
         <!-- Toolbar -->
         <div class="events-toolbar" style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
@@ -167,7 +177,7 @@
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
     import { connect as connectSocket, disconnect as disconnectSocket, on as onSocket, off as offSocket } from '@/services/devices/deviceSocket';
-    import { getLimitedDevices } from '@/services/devices/devices';   
+    import { getLimitedDevices, getPortsDevice } from '@/services/devices/devices';   
     import { getTypeDevicesCounts } from '@/services/type devices/typeDevices';   
     import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
     import AgGridContextMenu from '@/components/AgGridContextMenu.vue';
@@ -176,6 +186,7 @@
     import eChartComponent from '@/components/eChartComponent.vue';
     import { getDeviceEventsByDeviceId } from '@/services/devices/deviceEvents';
     import DetailsComponent from '@/components/DetailsComponent.vue';
+    import CardModalComponent from '@/components/CardModalComponent.vue';
 
     const customDevices = ref([]);
     const deviceNav = ref(null);
@@ -197,6 +208,7 @@
     const showEventsModal = ref(false);
     const selectedDeviceRow = ref(null);
     const eventsRows = ref([]);
+    const portsCards = ref([]);
     const eventsPage = ref(1);
     const eventsPageSize = ref(20);
     const eventsStartDate = ref('');
@@ -257,7 +269,6 @@
             label: 'Edit',
             icon: 'glyphicon glyphicon-pencil',
             action: (row) => {
-                // eslint-disable-next-line no-console
                 console.log('[Action] Edit row:', row);
             }
         },
@@ -266,7 +277,6 @@
             label: 'Delete',
             icon: 'glyphicon glyphicon-trash',
             action: (row) => {
-                // eslint-disable-next-line no-console
                 console.log('[Action] Delete row:', row);
             }
         },
@@ -278,6 +288,7 @@
                 selectedDeviceRow.value = row;
                 eventsPage.value = 1;
                 await loadDeviceEvents();
+                await loadDevicePorts();
                 showEventsModal.value = true;
             }
         }
@@ -452,6 +463,41 @@
         }
     }
 
+    // Load device ports and map to card items
+    async function loadDevicePorts() {
+        const deviceId = selectedDeviceRow.value?.id;
+        if (!deviceId) {
+            portsCards.value = [];
+            return;
+        }
+        try {
+            const ports = await getPortsDevice(deviceId);
+            portsCards.value = (ports || []).map(p => ({
+                title: `${p.name} ${p.name ? `(P-${p.port_id})` : ''}`,
+                name: p.speed ? `${Math.ceil(p.speed / 1000000000)} Gbp/s` : undefined,
+                type: p.type || '-',
+                status: (p.operStatus || '').toLowerCase() === 'up' ? 'up' : 'down',
+                enabled: p.isMonitored,
+            }));
+        } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error('[DevicePorts] Erreur lors du chargement:', error?.message || error);
+            portsCards.value = [];
+        }
+    }
+
+    function onToggleItem(payload) {
+        // payload: { item, enabled }
+        // eslint-disable-next-line no-console
+        console.log('[CardModal] toggle', payload);
+    }
+
+    function onActionItem(payload) {
+        // payload: { item }
+        // eslint-disable-next-line no-console
+        console.log('[CardModal] action', payload);
+    }
+
     function onEventsFilterChanged() {
         eventsPage.value = 1;
         eventsTargetPage.value = 1;
@@ -461,15 +507,13 @@
     function onEventsPageSizeChanged() {
         eventsPage.value = 1;
         eventsTargetPage.value = 1;
-        // Le watcher se chargera de recharger les données
     }
 
     function changeEventsPage(p) {
         let page = Number(p) || 1;
         if (page < 1) page = 1;
         eventsPage.value = page;
-        eventsTargetPage.value = page; // Synchroniser l'input
-        // Le watcher se chargera de recharger les données
+        eventsTargetPage.value = page;
     }
 
     function jumpToEventsPage() {
@@ -574,24 +618,20 @@
     }
 
 
-    // Appliquer les filtres manuellement
     async function applyFilters() {
         if (!agGridRef.value) {
             console.log('[ApplyFilters] AgGrid ref non disponible');
             return;
         }
 
-        // Vérifier qu'au moins un device est sélectionné
         if (!selectedDevice.value) {
             console.log('[ApplyFilters] Aucun device sélectionné, impossible d\'appliquer les filtres');
             return;
         }
 
-        // Récupérer le filtre actuel depuis AgGrid
         const currentFilterModel = agGridRef.value.getFilterModel();
         console.log('[ApplyFilters] Filtre actuel depuis AgGrid:', currentFilterModel);
 
-        // Convertir le modèle de filtre AgGrid en format compatible avec le backend
         const filterFromGrid = {};
         for (const key in currentFilterModel) {
             const f = currentFilterModel[key];
@@ -600,12 +640,10 @@
             }
         }
 
-        // Utiliser uniquement le filtre du device sélectionné (pas de fusion)
         const deviceFilter = columns.value.some(col => col.field === 'type_device')
             ? { type_device: { filter: selectedDevice.value.name } }
             : { key: { filter: selectedDevice.value.name } };
 
-        // Convertir le filtre du device en format backend
         const deviceFilterBackend = {};
         for (const key in deviceFilter) {
             const f = deviceFilter[key];
@@ -614,21 +652,15 @@
             }
         }
 
-        // Combiner le filtre du device avec les filtres de la grille (sans fusion externe)
         const finalFilter = { ...deviceFilterBackend, ...filterFromGrid };
         console.log('[ApplyFilters] Application des filtres (device + grille):', finalFilter);
-
         gridFilterModel.value = finalFilter;
-
-        // Recharger avec pagination et filtre
         await loadDevices();
     }
 
-    // Effacer tous les filtres
     async function clearFilters() {
         console.log('[ClearFilters] Effacement des filtres...');
         
-        // Vérifier qu'au moins un device est sélectionné
         if (!selectedDevice.value) {
             console.log('[ClearFilters] Aucun device sélectionné, impossible d\'effacer les filtres');
             return;
@@ -641,7 +673,6 @@
         await loadDevices();
     }
 
-    // Bouton reload
     async function reloadGrid() {
         console.log('[ReloadGrid] Rechargement des données...');
         await loadDevices();
@@ -657,7 +688,6 @@
     }
 
     function onCellContextMenu(event) {
-        // Blocage du menu natif pour utiliser notre menu personnalisé
         if (event && event.event && typeof event.event.preventDefault === 'function') {
             event.event.preventDefault();
         }
@@ -673,15 +703,12 @@
         await loadTypeDevices();
         await loadDevices();
 
-        // Socket connection (no auth)
         connectSocket({
             url: "http://localhost:3000"
         });
 
-        // Refresh devices list on bulk update (avec protection contre les appels trop fréquents)
         onSocket('devices:bulk_update', async () => {
             const now = Date.now();
-            // Éviter les appels trop fréquents (minimum 1 seconde entre les appels)
             if (lastSocketUpdate.value && (now - lastSocketUpdate.value) < 1000) {
                 console.log('[Socket] Ignore bulk_update (trop fréquent)');
                 return;
@@ -690,7 +717,6 @@
             await loadDevices();
         });
 
-        // Refresh device events when a new event is created
         onSocket('deviceEvents:created', async (payload) => {
             const currentDeviceId = selectedDeviceRow.value?.id;
             if (!currentDeviceId) return;
