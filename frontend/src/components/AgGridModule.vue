@@ -22,7 +22,6 @@ import { ref, defineProps, watch, defineExpose, defineEmits } from 'vue'
 import { AgGridVue } from 'ag-grid-vue3'
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
 
-// Enregistrer tous les modules communautaires
 ModuleRegistry.registerModules([AllCommunityModule])
 
 const emit = defineEmits(['filter-changed', 'filter-apply', 'cell-context-menu'])
@@ -44,7 +43,7 @@ const defaultColDef = {
   sortable: true,
   filter: true,
   filterParams: {
-    buttons: ['apply', 'reset'],  // active boutons
+    buttons: ['apply', 'reset'],
     closeOnApply: true
   }
 }
@@ -58,7 +57,6 @@ function onGridReady(params) {
     gridApi.value.setQuickFilter(props.quickFilterText)
   }
 
-  // Appliquer manuellement Enter dans les filtres si besoin
   const gridElement = document.querySelector(`#${props.gridId || 'ag-grid'}`)
   if (gridElement) {
     gridElement.addEventListener('keydown', (event) => {
@@ -91,7 +89,6 @@ function onFilterChanged() {
 }
 
 function onCellContextMenu(event) {
-  // Propager l'événement au parent pour gestion du menu contextuel
   emit('cell-context-menu', event)
 }
 
