@@ -4,32 +4,6 @@ const api = axios.create({
   baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000',
 })
 
-export async function getDevices({filter = {}} = {}) {
-  try {
-    console.log('[GetDevices] Début de la récupération des devices...', { filter })
-    
-    // Ne pas envoyer de paramètre filter si il est vide, null ou undefined
-    const params = {}
-    if (filter && Object.keys(filter).length > 0) {
-      params.filter = JSON.stringify(filter)
-    }
-    
-    const response = await api.get('/devices/list', { params })
-    console.log('[GetDevices] Succès:', {
-      status: response.status,
-      count: Array.isArray(response.data) ? response.data.length : (response.data && response.data.data ? response.data.data.length : undefined)
-    })
-    return response.data
-  } catch (error) {
-    const jsonErrorMessage = error && error.response && error.response.data
-      ? (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data))
-      : null
-    const message = jsonErrorMessage || error.message || 'Erreur inconnue'
-    console.error('[GetDevices] Erreur lors de la récupération:', message)
-    throw new Error(`Impossible de charger les devices: ${message}`)
-  }
-}
-
 export async function getLimitedDevices({ page = 1, pageSize = 20, filter = {} } = {}) {
   try {
     console.log("page = ",page, "pageSize = ",pageSize, "filter = ", filter);
@@ -65,6 +39,10 @@ export async function getLimitedDevices({ page = 1, pageSize = 20, filter = {} }
     throw new Error(`Impossible de charger les devices: ${message}`)
   }
 }
+
+// export async function getPortsDevice(id) {
+
+// }
 
 export async function getDevice(id) {
   return api.get(`/devices/${id}`)
