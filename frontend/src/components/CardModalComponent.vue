@@ -49,7 +49,7 @@
               class="action-btn"
               @click="onAction(item)"
             >
-              <i class="bi bi-gear"></i>
+              <i class="glyphicon glyphicon-chevron-right"></i>
             </button>
             </div>
           </slot>

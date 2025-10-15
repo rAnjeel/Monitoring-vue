@@ -1,19 +1,30 @@
 <template>
-  <div v-if="modelValue" class="modal-backdrop" @click.self="onBackdrop">
-    <div class="modal" :style="{ width: computedWidth }">
-      <div class="modal-header">
-        <slot name="header">
-          <h3 class="modal-title">{{ title }}</h3>
-        </slot>
-        <button v-if="showClose" class="close-btn" @click="close">×</button>
-      </div>
-
-      <div class="modal-body">
-        <slot />
+  <Transition name="modal-fade">
+    <div v-if="modelValue" class="modal-backdrop" @click.self="onBackdrop">
+      <div class="modal" :style="{ width: computedWidth }">
+        <div class="modal-header">
+          <div class="header-content">
+            <slot name="header">
+              <h4 class="modal-title text-uppercase">{{ title }}</h4>
+            </slot>
+          </div>
+          <button v-if="showClose" class="close-btn" @click="close" aria-label="Close modal">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="modal-body">
+          <slot />
+        </div>
+        
+        <div v-if="$slots.footer" class="modal-footer">
+          <slot name="footer" />
+        </div>
       </div>
     </div>
-  </div>
-  
+  </Transition>
 </template>
 
 <script setup>
@@ -42,77 +53,193 @@ function onBackdrop() {
 </script>
 
 <style scoped>
+/* Backdrop */
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 20px;
 }
 
+/* Modal Container */
 .modal {
   max-height: 90vh;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  max-width: 95vw;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  animation: modal-appear 0.2s ease-out;
 }
 
+@keyframes modal-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Header */
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 8px;
-  background: linear-gradient(135deg, #425e7a 0%, #2c3e50 100%);
-  color: #efefef;
-  border-bottom: 0;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  gap: 10px;
+  padding: 10px 15px;
+  background: #2c3e50;
+  border-bottom: 1px solid #e5e7eb;
+  min-height: 56px;
+}
+
+.header-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .modal-title {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: 0.2px;
+  color: #e7e7e7;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
 }
 
+/* Close Button */
 .close-btn {
+  flex-shrink: 0;
   border: none;
-  background: rgba(255,255,255,0.16);
-  color: #fff;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  font-size: 18px;
-  line-height: 32px;
-  text-align: center;
+  background: transparent;
+  color: #6b7280;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.05s ease;
+  transition: all 0.15s ease;
+  padding: 0;
 }
 
 .close-btn:hover {
-  background: rgba(255,255,255,0.28);
+  background: #f3f4f6;
+  color: #111827;
 }
 
 .close-btn:active {
-  transform: scale(0.98);
+  background: #e5e7eb;
+  transform: scale(0.95);
 }
 
+.close-btn:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Body */
 .modal-body {
-  padding: 12px 16px;
+  padding: 24px;
   overflow: auto;
+  flex: 1;
 }
 
+/* Custom Scrollbar */
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: #f9fafb;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Footer */
 .modal-footer {
-  padding: 10px 16px;
-  border-top: 1px solid #eee;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Transitions */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+.modal-fade-enter-active .modal {
+  animation: modal-appear 0.2s ease-out;
+}
+
+.modal-fade-leave-active .modal {
+  animation: modal-disappear 0.15s ease-in;
+}
+
+@keyframes modal-disappear {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .modal {
+    max-height: 95vh;
+    border-radius: 16px 16px 0 0;
+    margin-top: auto;
+  }
+  
+  .modal-header {
+    padding: 16px 20px;
+    min-height: 64px;
+  }
+  
+  .modal-title {
+    font-size: 18px;
+  }
+  
+  .modal-body {
+    padding: 20px;
+  }
+  
+  .modal-footer {
+    padding: 12px 20px;
+  }
 }
 </style>
 

@@ -86,7 +86,7 @@
     <!-- Device Events Modal -->
     <ModalComponent
         v-model="showEventsModal"
-        :title="`Device events - ${selectedDeviceRow?.hostname || ''}`"
+        :title="`Device details - ${selectedDeviceRow?.hostname || ''}`"
         :width="'min(1000px, 96vw)'"
     >
         <!-- Détails des champs masqués de l'équipement sélectionné -->
@@ -116,37 +116,41 @@
         <h3 class="events-section-title">Historic Events</h3>
 
         <!-- Toolbar -->
-        <div class="events-toolbar" style="display:flex;gap:12px;align-items:center;margin-bottom:8px;">
-        <label>Start
-            <input type="datetime-local" v-model="eventsStartDate" @change="onEventsFilterChanged" />
-        </label>
-        <label>End
-            <input type="datetime-local" v-model="eventsEndDate" @change="onEventsFilterChanged" />
-        </label>
-        <label>Page size
-            <select v-model.number="eventsPageSize" @change="onEventsPageSizeChanged">
-            <option :value="10">10</option>
-            <option :value="20">20</option>
-            <option :value="50">50</option>
+        <div class="events-toolbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px;">
+          <div class="form-group" style="display:flex;flex-direction:column;gap:4px;min-width:180px;">
+            <label class="control-label" style="font-size:12px;color:#64748b;">Start</label>
+            <input type="datetime-local" v-model="eventsStartDate" @change="onEventsFilterChanged" class="form-control input-sm" />
+          </div>
+          <div class="form-group" style="display:flex;flex-direction:column;gap:4px;min-width:180px;">
+            <label class="control-label" style="font-size:12px;color:#64748b;">End</label>
+            <input type="datetime-local" v-model="eventsEndDate" @change="onEventsFilterChanged" class="form-control input-sm" />
+          </div>
+          <div class="form-group" style="display:flex;flex-direction:column;gap:4px;min-width:120px;">
+            <label class="control-label" style="font-size:12px;color:#64748b;">Page size</label>
+            <select v-model.number="eventsPageSize" @change="onEventsPageSizeChanged" class="form-control input-sm">
+              <option :value="10">10</option>
+              <option :value="20">20</option>
+              <option :value="50">50</option>
             </select>
-        </label>
-        <label>Status
-            <select v-model="eventsStatus" @change="onEventsFilterChanged">
-            <option value="">All</option>
-            <option value="up">Up</option>
-            <option value="down">Down</option>
+          </div>
+          <div class="form-group" style="display:flex;flex-direction:column;gap:4px;min-width:140px;">
+            <label class="control-label" style="font-size:12px;color:#64748b;">Status</label>
+            <select v-model="eventsStatus" @change="onEventsFilterChanged" class="form-control input-sm">
+              <option value="">All</option>
+              <option value="up">Up</option>
+              <option value="down">Down</option>
             </select>
-        </label>
-        <label>Go to page
-            <input type="number" min="1" v-model.number="eventsTargetPage" 
-                    @keyup.enter="jumpToEventsPage" 
-                    class="form-control input-sm" 
-                    style="display:inline-block;width:80px;margin-left:4px;" />
-        </label>
-        <button @click="loadDeviceEvents" class="btn btn-sm btn-primary" :disabled="loading">
-            <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
-            Reload
-        </button>
+          </div>
+          <div class="form-group" style="display:flex;flex-direction:column;gap:4px;min-width:120px;">
+            <label class="control-label" style="font-size:12px;color:#64748b;">Go to page</label>
+            <input type="number" min="1" v-model.number="eventsTargetPage" @keyup.enter="jumpToEventsPage" class="form-control input-sm" />
+          </div>
+          <div style="margin-left:auto;display:flex;gap:8px;">
+            <button @click="loadDeviceEvents" class="btn btn-primary btn-sm" :disabled="loading">
+              <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
+              Reload
+            </button>
+          </div>
         </div>
 
         <!-- Grid -->

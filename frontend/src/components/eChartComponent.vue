@@ -1,7 +1,15 @@
 <template>
   <div class="echart-section">
     <div class="echart-block">
-      <v-chart :option="option" autoresize :style="{ height: props.height }" />
+      <template v-if="hasData">
+        <v-chart :option="option" autoresize :style="{ height: props.height }" />
+      </template>
+      <template v-else>
+        <div class="no-data">
+          <div class="no-data-icon"><i class="glyphicon glyphicon-signal"></i></div>
+          <div class="no-data-text">No data available</div>
+        </div>
+      </template>    
     </div>
   </div>
   
@@ -29,6 +37,20 @@ const props = defineProps({
   xLabel: { type: String, default: '' },
   height: { type: String, default: '260px' },
   smooth: { type: Boolean, default: true },
+})
+
+const hasData = computed(() => {
+  if (!props.x?.length) return false
+  if (Array.isArray(props.y)) {
+    if (!props.y.length) return false
+    // si y est une liste simple de valeurs numériques
+    if (typeof props.y[0] !== 'object') {
+      return props.y.some(v => v != null && !isNaN(v))
+    }
+    // si y est une liste d’objets { name, data }
+    return props.y.some(s => Array.isArray(s.data) && s.data.some(v => v != null && !isNaN(v)))
+  }
+  return false
 })
 
 const option = computed(() => {
@@ -104,6 +126,29 @@ const option = computed(() => {
   width: 100%;
   padding: 8px 0;
   margin: 12px 0 16px;
+}
+
+.no-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  height: 100px;
+  background: #f8fafc;
+  border: 1px dashed #e2e8f0;
+  border-radius: 8px;
+}
+
+.no-data-icon {
+  font-size: 26px;
+  margin-bottom: 6px;
+}
+
+.no-data-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
 }
 </style>
 

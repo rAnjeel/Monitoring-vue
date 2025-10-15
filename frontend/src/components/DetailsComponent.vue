@@ -58,7 +58,7 @@ function formatValue(value) {
 .section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .section-title {
@@ -74,11 +74,11 @@ function formatValue(value) {
 .device-details {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  padding: 20px;
+  gap: 12px;
+  padding: 12px;
   background: #f8fafc;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #c5d4e3;
 }
 
 .detail-item {
