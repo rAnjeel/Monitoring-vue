@@ -1,6 +1,11 @@
 <template>
   <div class="section">
-    <h3 v-if="title" class="section-title">{{ title }}</h3>
+    <div v-if="title" class="section-title-row">
+      <h3 class="section-title">{{ title }}</h3>
+      <div class="section-actions">
+        <slot name="header-actions" />
+      </div>
+    </div>
 
     <div class="cards-container">
       <button type="button" class="modal-nav-arrow left" @click="scrollLeft" :disabled="!canScrollLeft">
@@ -180,3 +185,16 @@ watch(items, async () => {
 
 window.addEventListener('resize', handleResize)
 </script>
+
+<style scoped>
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.section-actions :deep(button) {
+  margin-left: 8px;
+}
+</style>

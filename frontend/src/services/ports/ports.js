@@ -68,4 +68,19 @@ export function createPort(port) {
   return api.post('/ports', port)
 }
 
+export async function switchPortMonitored(portId, isMonitored) {
+  try {
+    if (portId == null) throw new Error('portId is required')
+    const payload = { isMonitored: !!isMonitored }
+    const response = await api.put(`/ports/${portId}/switch-monitored`, payload)
+    return response?.data
+  } catch (error) {
+    const jsonErrorMessage = error && error.response && error.response.data
+      ? (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data))
+      : null
+    const message = jsonErrorMessage || error.message || 'Erreur inconnue'
+    console.error('[switchPortMonitored] Erreur:', message)
+    throw new Error(`Impossible de mettre à jour le port ${portId}: ${message}`)
+  }
+}
 

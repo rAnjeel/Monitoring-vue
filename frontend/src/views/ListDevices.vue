@@ -100,7 +100,14 @@
             toggle-label="Monitoring"
             @toggle="onToggleItem"
             @action="onActionItem"
-        />
+        >
+          <template #header-actions>
+            <button v-if="pendingCount > 0" type="button" class="btn btn-success btn-xs" @click="validatePortToggles">
+              <span class="glyphicon glyphicon-ok"></span>
+              Validate
+            </button>
+          </template>
+        </CardModalComponent>
 
         <h3 class="events-section-title">Ping results variations</h3>
         <eChartComponent
@@ -217,6 +224,7 @@
     import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
     import { connect as connectSocket, disconnect as disconnectSocket, on as onSocket, off as offSocket } from '@/services/devices/deviceSocket';
     import { getLimitedDevices, getPortsDevice, exportDeviceReportingCsv } from '@/services/devices/devices';   
+    import { switchPortMonitored } from '@/services/ports/ports';
     import { getTypeDevicesCounts } from '@/services/type devices/typeDevices';   
     import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
     import AgGridContextMenu from '@/components/AgGridContextMenu.vue';
@@ -248,6 +256,8 @@
     const selectedDeviceRow = ref(null);
     const eventsRows = ref([]);
     const portsCards = ref([]);
+    const pendingToggles = ref(new Map());
+    const pendingCount = computed(() => pendingToggles.value.size);
     const eventsPage = ref(1);
     const eventsPageSize = ref(20);
     const eventsStartDate = ref('');
@@ -537,9 +547,11 @@
                         ? 'up' 
                         : 'down',              
                 enabled: p.isMonitored,
+                port_id: p.port_id,
+                __originalEnabled: p.isMonitored,
             }));
+            pendingToggles.value.clear()
         } catch (error) {
-            // eslint-disable-next-line no-console
             console.error('[DevicePorts] Erreur lors du chargement:', error?.message || error);
             portsCards.value = [];
         }
@@ -572,14 +584,34 @@
 
     function onToggleItem(payload) {
         // payload: { item, enabled }
-        // eslint-disable-next-line no-console
-        console.log('[CardModal] toggle', payload);
+        const portId = payload?.item?.port_id
+        if (portId == null) return
+        // Update item enabled to reflect UI state
+        const idx = portsCards.value.findIndex(p => p.port_id === portId)
+        if (idx >= 0) portsCards.value[idx].enabled = !!payload.enabled
+        // Track only if changed from original
+        const original = portsCards.value[idx]?.__originalEnabled
+        if (original === payload.enabled) {
+            pendingToggles.value.delete(portId)
+        } else {
+            pendingToggles.value.set(portId, !!payload.enabled)
+        }
     }
 
     function onActionItem(payload) {
-        // payload: { item }
-        // eslint-disable-next-line no-console
         console.log('[CardModal] action', payload);
+    }
+
+    async function validatePortToggles() {
+        const updates = Array.from(pendingToggles.value.entries())
+        if (updates.length === 0) return
+        try {
+            await Promise.all(updates.map(([portId, isMonitored]) => switchPortMonitored(portId, isMonitored)))
+            pendingToggles.value.clear()
+            await loadDevicePorts()
+        } catch (e) {
+            console.error('[ValidatePortToggles] Failed:', e?.message || e)
+        }
     }
 
     function onEventsFilterChanged() {
