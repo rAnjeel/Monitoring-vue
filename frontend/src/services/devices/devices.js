@@ -52,3 +52,18 @@ export function createDevice(device) {
   return api.post('/devices', device)
 }
 
+export async function getPortsDevice(id) {
+  try {
+    if (id == null) throw new Error('id is required')
+    const response = await api.get(`/devices/${id}/ports`)
+    return Array.isArray(response.data) ? response.data : []
+  } catch (error) {
+    const jsonErrorMessage = error && error.response && error.response.data
+      ? (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data))
+      : null
+    const message = jsonErrorMessage || error.message || 'Erreur inconnue'
+    console.error('[getPortsDevice] Erreur:', message)
+    throw new Error(`Impossible de charger les ports du device ${id}: ${message}`)
+  }
+}
+
