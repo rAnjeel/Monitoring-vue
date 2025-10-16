@@ -480,7 +480,11 @@
                 title: `${p.name} ${p.name ? `(P-${p.port_id})` : ''}`,
                 name: p.speed ? `${Math.ceil(p.speed / 1000000000)} Gbp/s` : undefined,
                 type: p.type || '-',
-                status: (p.operStatus || '').toLowerCase() === 'up' ? 'up' : 'down',
+                status: p.status === 'undefined' 
+                    ? 'undefined'
+                    : (p.status || '').toLowerCase() === 'up' 
+                        ? 'up' 
+                        : 'down',              
                 enabled: p.isMonitored,
             }));
         } catch (error) {
