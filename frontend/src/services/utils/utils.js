@@ -100,4 +100,3 @@ export function badgeContainer(value) {
   container.textContent = value;
   return container;
 }
-

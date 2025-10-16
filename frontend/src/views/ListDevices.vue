@@ -83,7 +83,7 @@
 
     <CsvImport v-model="showImportDevices" :import-type="'devices'" @import="reloadGrid" />
 
-    <!-- Device Events Modal -->
+    <!-- DETAILS DEVICE MODAL -->
     <ModalComponent
         v-model="showEventsModal"
         :title="`Device details - ${selectedDeviceRow?.hostname || ''}`"
@@ -145,15 +145,20 @@
             <label class="control-label" style="font-size:12px;color:#64748b;">Go to page</label>
             <input type="number" min="1" v-model.number="eventsTargetPage" @keyup.enter="jumpToEventsPage" class="form-control input-sm" />
           </div>
-          <div style="margin-left:auto;display:flex;gap:8px;">
-            <button @click="loadDeviceEvents" class="btn btn-primary btn-sm" :disabled="loading">
-              <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
-              Reload
-            </button>
+          <div style="margin-left:auto;flex-direction:column;display:flex;gap:4px;">
+            <div style="display:flex;gap:8px;">
+              <button @click="loadDeviceEvents" class="btn btn-primary btn-sm" :disabled="loading">
+                <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
+              </button>
+              <button @click="openExportModal" class="btn btn-success btn-sm" :disabled="!selectedDeviceRow?.id">
+                <span class="glyphicon glyphicon-export"></span>
+                Export
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- Grid -->
+        <!-- Events AgGrid -->
         <div v-if="eventsRows.length === 0" style="padding:8px 0;">No events</div>
         <AgGridModule
             v-else
@@ -169,6 +174,36 @@
         <button :disabled="!eventsHasNextPage" @click="changeEventsPage(eventsPage + 1)">Next</button>
         </div>
     </ModalComponent>
+
+    <!-- EXPORT REPORT MODAL -->
+    <ModalComponent
+        v-model="showExportModal"
+        :title="'Export device history'"
+        :width="'max(520px, 36vw)'"
+        :maxHeight="'60vh'"
+    >
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div class="form-group" style="display:flex;flex-direction:column;gap:4px;">
+          <label class="control-label" style="font-size:12px;color:#64748b;">Start date</label>
+          <input type="datetime-local" v-model="exportStartDate" class="form-control input-sm" />
+        </div>
+        <div class="form-group" style="display:flex;flex-direction:column;gap:4px;">
+          <label class="control-label" style="font-size:12px;color:#64748b;">End date</label>
+          <input type="datetime-local" v-model="exportEndDate" class="form-control input-sm" />
+        </div>
+        <div class="form-group" style="display:flex;flex-direction:column;gap:4px;">
+          <label class="control-label" style="font-size:12px;color:#64748b;">Filename</label>
+          <input type="text" v-model="exportFilename" placeholder="device-report.csv" class="form-control input-sm" />
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
+          <button class="btn btn-default btn-sm" @click="showExportModal = false">Cancel</button>
+          <button class="btn btn-success btn-sm" :disabled="isExportDisabled" @click="exportReporting">
+            <span class="glyphicon glyphicon-download"></span>
+            Export CSV
+          </button>
+        </div>
+      </div>
+    </ModalComponent>
   </div>
 </template>
 
@@ -181,7 +216,7 @@
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
     import { connect as connectSocket, disconnect as disconnectSocket, on as onSocket, off as offSocket } from '@/services/devices/deviceSocket';
-    import { getLimitedDevices, getPortsDevice } from '@/services/devices/devices';   
+    import { getLimitedDevices, getPortsDevice, exportDeviceReportingCsv } from '@/services/devices/devices';   
     import { getTypeDevicesCounts } from '@/services/type devices/typeDevices';   
     import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
     import AgGridContextMenu from '@/components/AgGridContextMenu.vue';
@@ -220,6 +255,13 @@
     const eventsStatus = ref('');
     const eventsHasNextPage = ref(false);
     const eventsTargetPage = ref(1);
+    const showExportModal = ref(false);
+    const exportStartDate = ref('');
+    const exportEndDate = ref('');
+    const exportFilename = ref('device-report.csv');
+    const isExportDisabled = computed(() => {
+        return !selectedDeviceRow.value?.id || !exportStartDate.value || !exportEndDate.value || !exportFilename.value;
+    });
 
     const eventColumns = ref([
       { headerName: 'Status', field: 'status', minWidth: 80 },
@@ -294,6 +336,15 @@
                 await loadDeviceEvents();
                 await loadDevicePorts();
                 showEventsModal.value = true;
+            }
+        },
+        {
+            id: 'export',
+            label: 'Export History',
+            icon: 'glyphicon glyphicon-export',
+            action: async (row) => {
+                selectedDeviceRow.value = row;
+                showExportModal.value = true;
             }
         }
     ]);
@@ -491,6 +542,31 @@
             // eslint-disable-next-line no-console
             console.error('[DevicePorts] Erreur lors du chargement:', error?.message || error);
             portsCards.value = [];
+        }
+    }
+
+    function openExportModal() {
+        if (!selectedDeviceRow.value?.id) return;
+        if (!exportStartDate.value) exportStartDate.value = '';
+        if (!exportEndDate.value) exportEndDate.value = '';
+        if (!exportFilename.value) exportFilename.value = 'device-report.csv';
+        showExportModal.value = true;
+    }
+
+    async function exportReporting() {
+        const deviceId = selectedDeviceRow.value?.id;
+        if (!deviceId) return;
+        if (isExportDisabled.value) return;
+        try {
+            await exportDeviceReportingCsv(deviceId, {
+                start_date: exportStartDate.value,
+                end_date: exportEndDate.value,
+                filename: exportFilename.value
+            });
+            showExportModal.value = false;
+        } catch (e) {
+            // eslint-disable-next-line no-console
+            console.error('[ExportReporting] Failed:', e?.message || e);
         }
     }
 
