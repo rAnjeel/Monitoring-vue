@@ -1,8 +1,8 @@
 <template>
   <Transition name="modal-fade">
     <div v-if="modelValue" class="modal-backdrop" @click.self="onBackdrop">
-      <div class="modal" :style="{ width: computedWidth }">
-        <div class="modal-header">
+      <div ref="modalRef" class="modal" :style="modalStyle">
+        <div class="modal-header" @mousedown="onHeaderMouseDown">
           <div class="header-content">
             <slot name="header">
               <h4 class="modal-title text-uppercase">{{ title }}</h4>
@@ -28,12 +28,13 @@
 </template>
 
 <script setup>
-import { computed, defineProps, defineEmits } from 'vue'
+import { computed, defineProps, defineEmits, ref, onMounted, onBeforeUnmount, watch, nextTick, defineExpose } from 'vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   title: { type: String, default: '' },
   width: { type: [String, Number], default: 'min(1100px, 96vw)' },
+  maxHeight: { type: [String, Number], default: '90vh' },
   closeOnBackdrop: { type: Boolean, default: true },
   showClose: { type: Boolean, default: true },
 })
@@ -41,6 +42,37 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'close'])
 
 const computedWidth = computed(() => typeof props.width === 'number' ? `${props.width}px` : props.width)
+
+// Draggable state (exposed)
+const draggable = ref(true)
+defineExpose({ draggable })
+
+// Drag positions
+const modalRef = ref(null)
+const isDragging = ref(false)
+const hasDragged = ref(false)
+const left = ref(0)
+const top = ref(0)
+let startX = 0
+let startY = 0
+let startLeft = 0
+let startTop = 0
+
+const modalStyle = computed(() => {
+  const base = { width: computedWidth.value }
+  const computedMaxH = typeof props.maxHeight === 'number' ? `${props.maxHeight}px` : props.maxHeight
+  base.maxHeight = computedMaxH
+  if (hasDragged.value) {
+    return {
+      ...base,
+      position: 'fixed',
+      left: `${left.value}px`,
+      top: `${top.value}px`,
+      margin: '0',
+    }
+  }
+  return base
+})
 
 function close() {
   emit('update:modelValue', false)
@@ -50,6 +82,76 @@ function close() {
 function onBackdrop() {
   if (props.closeOnBackdrop) close()
 }
+
+function onHeaderMouseDown(e) {
+  if (!draggable.value) return
+  if (e.button !== 0) return
+  const el = modalRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  startX = e.clientX
+  startY = e.clientY
+  // If first drag, initialize to current rect
+  if (!hasDragged.value) {
+    left.value = rect.left
+    top.value = rect.top
+  }
+  startLeft = left.value
+  startTop = top.value
+  isDragging.value = true
+  hasDragged.value = true
+  window.addEventListener('mousemove', onMouseMove)
+  window.addEventListener('mouseup', onMouseUp)
+}
+
+function onMouseMove(e) {
+  if (!isDragging.value) return
+  const dx = e.clientX - startX
+  const dy = e.clientY - startY
+  const el = modalRef.value
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const rect = el ? el.getBoundingClientRect() : { width: 0, height: 0 }
+  let nextLeft = startLeft + dx
+  let nextTop = startTop + dy
+  // Constrain to viewport
+  const minLeft = 0
+  const minTop = 0
+  const maxLeft = Math.max(0, vw - rect.width)
+  const maxTop = Math.max(0, vh - rect.height)
+  left.value = Math.min(Math.max(nextLeft, minLeft), maxLeft)
+  top.value = Math.min(Math.max(nextTop, minTop), maxTop)
+}
+
+function onMouseUp() {
+  if (!isDragging.value) return
+  isDragging.value = false
+  window.removeEventListener('mousemove', onMouseMove)
+  window.removeEventListener('mouseup', onMouseUp)
+}
+
+onMounted(() => {
+  // Reset drag state whenever opened
+  watch(() => props.modelValue, async (val) => {
+    if (val) {
+      await nextTick()
+      const el = modalRef.value
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      // center by default (no hasDragged, so flex centering applies). Setup left/top for first drag usage.
+      left.value = rect.left
+      top.value = rect.top
+      isDragging.value = false
+    } else {
+      isDragging.value = false
+    }
+  }, { immediate: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('mousemove', onMouseMove)
+  window.removeEventListener('mouseup', onMouseUp)
+})
 </script>
 
 <style scoped>
@@ -103,6 +205,7 @@ function onBackdrop() {
   background: #2c3e50;
   border-bottom: 1px solid #e5e7eb;
   min-height: 56px;
+  cursor: move;
 }
 
 .header-content {

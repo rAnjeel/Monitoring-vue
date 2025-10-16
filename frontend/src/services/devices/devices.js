@@ -1,5 +1,5 @@
 import axios from 'axios'
-
+import { exportJsonToCsv } from '../csv/exportCSV'
 const api = axios.create({
   baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000',
 })
@@ -40,10 +40,6 @@ export async function getLimitedDevices({ page = 1, pageSize = 20, filter = {} }
   }
 }
 
-// export async function getPortsDevice(id) {
-
-// }
-
 export async function getDevice(id) {
   return api.get(`/devices/${id}`)
 }
@@ -65,5 +61,31 @@ export async function getPortsDevice(id) {
     console.error('[getPortsDevice] Erreur:', message)
     throw new Error(`Impossible de charger les ports du device ${id}: ${message}`)
   }
+}
+
+
+async function getDeviceReporting(deviceId, { start_date, end_date, pageSize = 10000 }) {
+  try {
+    if (!deviceId) throw new Error('deviceId is required')
+    if (!start_date || !end_date) throw new Error('start_date and end_date are required')
+    const params = { start_date, end_date, page: 1, pageSize }
+    const response = await api.get(`/device-events/device/${deviceId}`, { params })
+    const payload = response.data
+    if (payload && Array.isArray(payload.rows)) return payload.rows
+    if (Array.isArray(payload)) return payload
+    return []
+  } catch (error) {
+    const jsonErrorMessage = error && error.response && error.response.data
+      ? (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data))
+      : null
+    const message = jsonErrorMessage || error.message || 'Erreur inconnue'
+    console.error('[getDeviceReporting] Erreur:', message)
+    throw new Error(`Impossible de charger le reporting du device ${deviceId}: ${message}`)
+  }
+}
+
+export async function exportDeviceReportingCsv(deviceId, { start_date, end_date, filename = 'device-report.csv' }) {
+  const rows = await getDeviceReporting(deviceId, { start_date, end_date })
+  exportJsonToCsv(rows, filename)
 }
 
