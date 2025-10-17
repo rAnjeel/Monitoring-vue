@@ -15,34 +15,42 @@
             <div class="row" style="align-items:center;">
                 
                 <!-- Bloc gauche -->
-                <div class="col-md-6">
-                <label class="form-label">Show</label>
-                <select v-model.number="pageSize" class="form-control input-sm" style="display:inline-block;width:80px;margin:0 5px;">
-                    <option :value="20">20</option>
-                    <option :value="50">50</option>
-                    <option :value="100">100</option>
-                </select>
-                <span style="margin-right:6px;">entries |</span>
-                <label class="form-label" style="margin-right:6px;">Go to page</label>
-                <input type="number" min="1" :max="totalPagesDisplay" v-model.number="targetPage" 
-                        @keyup.enter="jumpToPage" 
-                        class="form-control input-sm" 
-                        style="display:inline-block;width:80px;margin-right: 6px;" />
-                <span class="form-label">/ {{ totalPagesDisplay }}</span>
+                <div class="col-md-8">
+                  <label class="form-label">Show</label>
+                  <select v-model.number="pageSize" class="form-control input-sm" style="display:inline-block;width:80px;margin:0 5px;">
+                      <option :value="20">20</option>
+                      <option :value="50">50</option>
+                      <option :value="100">100</option>
+                  </select>
+                  <span style="margin-right:6px;">entries |</span>
+                  <label class="form-label" style="margin-right:6px;">Go to page</label>
+                  <input type="number" min="1" :max="totalPagesDisplay" v-model.number="targetPage" 
+                          @keyup.enter="jumpToPage" 
+                          class="form-control input-sm" 
+                          style="display:inline-block;width:80px;margin-right: 6px;" />
+                  <span class="form-label" style="margin-right:6px;">/ {{ totalPagesDisplay }} |</span>
+                  <label class="form-label" style="margin-right:6px;">Hostname</label>
+                  <input type="text" class="form-control input-sm" placeholder="hostname" v-model="hostnameFilter" @input="onHostnameInput" style="display:inline-block;width:180px;margin-right:8px;" />
+                  <label class="form-label" style="margin-right:6px;">OnlyMonitored</label>
+                  <input type="checkbox" v-model="onlyMonitored" @change="onToggleOnlyMonitored" />
                 </div>
                 
                 <!-- Bloc droite -->
-                <div class="col-md-6 text-right">
-                <div class="btn-group" role="group" style="gap:8px;">
-                    <button @click="showImportPorts = true" class="btn btn-sm btn-primary" style="margin-right: 8px;">
-                    <span class="glyphicon glyphicon-upload"></span>
-                    Import CSV
-                    </button>
-                    <button @click="reloadGrid" class="btn btn-sm btn-info" :disabled="loading">
-                    <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
-                    Reload
-                    </button>
-                </div>
+                <div class="col-md-4 text-right">
+                   <div class="btn-group" role="group" style="gap:8px;">
+                      <button @click="showImportPorts = true" class="btn btn-sm btn-primary" style="margin-right: 8px;">
+                      <span class="glyphicon glyphicon-upload"></span>
+                      Import CSV
+                      </button>
+                       <button v-if="hasActiveFilters" @click="resetFilters" style="margin-right: 8px;" class="btn btn-sm btn-default" :disabled="loading">
+                       <span class="glyphicon glyphicon-filter" style="transform:rotate(180deg);"></span>
+                       Reset Filters
+                       </button>
+                      <button @click="reloadGrid" class="btn btn-sm btn-info" :disabled="loading">
+                      <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
+                      Reload
+                      </button>
+                  </div>
                 </div>
 
             </div>
@@ -188,6 +196,12 @@
     const eventsStatus = ref('');
     const eventsHasNextPage = ref(false);
     const eventsTargetPage = ref(1);
+    const onlyMonitored = ref(false);
+    const hostnameFilter = ref('');
+    const hasActiveFilters = computed(() => {
+      const gf = gridFilterModel.value;
+      return !!(gf && typeof gf === 'object' && Object.keys(gf).length > 0);
+    });
 
     const eventColumns = ref([
       { headerName: 'Status', field: 'status', minWidth: 80 },
@@ -236,7 +250,7 @@
 
     // Générer dynamiquement les colonnes en s'inspirant de ListDevices.vue
     function generateColumns(portsData) {
-        const columnsToHide = ['ifIndex', 'status', 'ne_id', 'device_id', 'hostname', 'sysName', 'sysname', 'adminStatus', 'operStatus', 'port_id', 'mtu', 'HighSpeed', 'PromiscuousMode', 'ConnectorPresent', 'in_octets', 'out_octets', 'Speed'];
+        const columnsToHide = ['description', 'status', 'ne_id', 'device_id', 'hostname', 'sysName', 'sysname', 'adminStatus', 'operStatus', 'port_id', 'mtu', 'HighSpeed', 'PromiscuousMode', 'ConnectorPresent', 'in_octets', 'out_octets', 'Speed'];
 
         const sample = (Array.isArray(portsData) && portsData.length > 0) ? portsData[0] : {};
         const keys = Object.keys(sample || {});
@@ -350,8 +364,6 @@
             if (!Array.isArray(ports)) {
                 throw new Error('Réponse inattendue du service ports');
             }
-
-            // Utiliser la fonction réutilisable pour générer les colonnes
             generateColumns(ports);
             rows.value = ports;
         } catch (err) {
@@ -366,6 +378,42 @@
     async function reloadGrid() {
         console.log('[ReloadPorts] Rechargement des données...');
         await loadPorts();
+    }
+
+    function onToggleOnlyMonitored() {
+      console.log('[Ports] OnlyMonitored changed:', onlyMonitored.value);
+      const current = (gridFilterModel.value && typeof gridFilterModel.value === 'object') ? { ...gridFilterModel.value } : {};
+      if (onlyMonitored.value) {
+          current.isMonitored = true;
+      } else {
+          delete current.isMonitored;
+      }
+      gridFilterModel.value = Object.keys(current).length > 0 ? current : null;
+      targetPage.value = 1;
+      loadPorts();
+    }
+
+    function onHostnameInput() {
+      console.log('[Ports] Hostname input:', hostnameFilter.value);
+      const current = (gridFilterModel.value && typeof gridFilterModel.value === 'object') ? { ...gridFilterModel.value } : {};
+      if (hostnameFilter.value && hostnameFilter.value.trim() !== '') {
+          current.hostname = hostnameFilter.value.trim();
+      } else {
+          delete current.hostname;
+      }
+      gridFilterModel.value = Object.keys(current).length > 0 ? current : null;
+      targetPage.value = 1;
+      loadPorts();
+    }
+
+    function resetFilters() {
+        console.log('[Ports] Reset filters');
+        hostnameFilter.value = '';
+        onlyMonitored.value = false;
+        gridFilterModel.value = null;
+        targetPage.value = 1;
+        try { window.__PORTS_INITIAL_FILTER__ = null; } catch (_) { /* noop */ }
+        loadPorts();
     }
 
     // Show in modal details the same fields as those hidden in the grid
@@ -452,61 +500,61 @@
     }
 
     function getGridApi() {
-    if (!agGridRef.value) return null;
-    return agGridRef.value.api || agGridRef.value.gridApi || (agGridRef.value.getApi && agGridRef.value.getApi()) || null;
-    }
+      if (!agGridRef.value) return null;
+      return agGridRef.value.api || agGridRef.value.gridApi || (agGridRef.value.getApi && agGridRef.value.getApi()) || null;
+      }
 
-    function getGridFilterModel() {
-    try {
-        if (!agGridRef.value) return {};
-        if (typeof agGridRef.value.getFilterModel === 'function') return agGridRef.value.getFilterModel();
-        const api = getGridApi();
-        if (api && typeof api.getFilterModel === 'function') return api.getFilterModel();
-    } catch (e) {
-        console.warn('getGridFilterModel error', e);
-    }
-    return {};
+      function getGridFilterModel() {
+      try {
+          if (!agGridRef.value) return {};
+          if (typeof agGridRef.value.getFilterModel === 'function') return agGridRef.value.getFilterModel();
+          const api = getGridApi();
+          if (api && typeof api.getFilterModel === 'function') return api.getFilterModel();
+      } catch (e) {
+          console.warn('getGridFilterModel error', e);
+      }
+      return {};
     }
 
     function setGridFilterModel(model) {
-    try {
-        if (!agGridRef.value) return;
-        if (typeof agGridRef.value.setFilterModel === 'function') {
-        agGridRef.value.setFilterModel(model);
-        }
-        const api = getGridApi();
-        if (api && typeof api.setFilterModel === 'function') {
-        api.setFilterModel(model);
-        api.onFilterChanged && api.onFilterChanged();
-        api.refreshFilters && api.refreshFilters();
-        api.refreshClientSideRowModel && api.refreshClientSideRowModel('filter');
-        }
-    } catch (e) {
-        console.warn('setGridFilterModel error', e);
-    }
+      try {
+          if (!agGridRef.value) return;
+          if (typeof agGridRef.value.setFilterModel === 'function') {
+          agGridRef.value.setFilterModel(model);
+          }
+          const api = getGridApi();
+          if (api && typeof api.setFilterModel === 'function') {
+          api.setFilterModel(model);
+          api.onFilterChanged && api.onFilterChanged();
+          api.refreshFilters && api.refreshFilters();
+          api.refreshClientSideRowModel && api.refreshClientSideRowModel('filter');
+          }
+      } catch (e) {
+          console.warn('setGridFilterModel error', e);
+      }
     }
 
     function onFilterChanged(filterModel) {
-    if (!filterModel || Object.keys(filterModel).length === 0) {
-        gridFilterModel.value = null;
-        return;
-    }
+      if (!filterModel || Object.keys(filterModel).length === 0) {
+          gridFilterModel.value = null;
+          return;
+      }
 
-    const mapped = {};
-    for (const key in filterModel) {
-        const f = filterModel[key];
-        if (!f) continue;
-        if (f.filter !== undefined && f.filter !== null && f.filter !== '') {
-        mapped[key] = f.filter;
-        continue;
-        }
-        if (Array.isArray(f.values) && f.values.length > 0) {
-        mapped[key] = f.values;
-        continue;
-        }
-    }
+      const mapped = {};
+      for (const key in filterModel) {
+          const f = filterModel[key];
+          if (!f) continue;
+          if (f.filter !== undefined && f.filter !== null && f.filter !== '') {
+          mapped[key] = f.filter;
+          continue;
+          }
+          if (Array.isArray(f.values) && f.values.length > 0) {
+          mapped[key] = f.values;
+          continue;
+          }
+      }
 
-    gridFilterModel.value = Object.keys(mapped).length > 0 ? mapped : null;
+      gridFilterModel.value = Object.keys(mapped).length > 0 ? mapped : null;
     }
 
     async function applyFilters() {
@@ -572,6 +620,19 @@
 
 
     onMounted(async () => {
+        try {
+          const initial = window.__PORTS_INITIAL_FILTER__ || null;
+          if (initial && typeof initial === 'object') {
+            // If a hostname was provided, also reflect it in the input control
+            if (initial.hostname) {
+              hostnameFilter.value = String(initial.hostname);
+            }
+            gridFilterModel.value = { ...(gridFilterModel.value || {}), ...initial };
+            targetPage.value = 1;
+            // one-shot consume
+            window.__PORTS_INITIAL_FILTER__ = null;
+          }
+        } catch (_) { /* noop */ }
         await loadPorts();
     });
 

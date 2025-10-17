@@ -30,6 +30,7 @@ export async function getLimitedPorts({ page = 1, pageSize = 20, filter = {} } =
     if (filter && Object.keys(filter).length > 0) {
       params.filter = JSON.stringify(filter);
     }
+    console.log("params = ", params);
     const response = await api.get('/ports/limit', { params });
 
     // Comptage

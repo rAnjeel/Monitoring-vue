@@ -602,8 +602,13 @@
         const portId = payload?.item?.port_id;
         if (portId == null) return;
         try {
-            // Pass initial filter to Ports view
-            window.__PORTS_INITIAL_FILTER__ = { port_id: { filter: String(portId) } };
+            // Pass initial hostname filter of the selected device to Ports view
+            const hostname = selectedDeviceRow.value?.hostname || '';
+            if (hostname) {
+                window.__PORTS_INITIAL_FILTER__ = { hostname };
+            } else {
+                window.__PORTS_INITIAL_FILTER__ = null;
+            }
         } catch (e) {
             // noop
         }
