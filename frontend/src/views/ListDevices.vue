@@ -457,7 +457,6 @@
 
     // Load data
     async function loadDevices() {
-        // Éviter les appels simultanés
         if (loading.value) {
             console.log('[LoadDevices] Déjà en cours de chargement, ignoré');
             return;
@@ -538,7 +537,7 @@
         try {
             const ports = await getPortsDevice(deviceId);
             portsCards.value = (ports || []).map(p => ({
-                title: `${p.name} ${p.name ? `(P-${p.port_id})` : ''}`,
+                title: `${p.name} ${p.name ? `(Idx: ${p.ifIndex})` : ''}`,
                 name: p.speed ? `${Math.ceil(p.speed / 1000000000)} Gbp/s` : undefined,
                 type: p.type || '-',
                 status: p.status === 'undefined' 
@@ -583,13 +582,10 @@
     }
 
     function onToggleItem(payload) {
-        // payload: { item, enabled }
         const portId = payload?.item?.port_id
         if (portId == null) return
-        // Update item enabled to reflect UI state
         const idx = portsCards.value.findIndex(p => p.port_id === portId)
         if (idx >= 0) portsCards.value[idx].enabled = !!payload.enabled
-        // Track only if changed from original
         const original = portsCards.value[idx]?.__originalEnabled
         if (original === payload.enabled) {
             pendingToggles.value.delete(portId)
@@ -602,7 +598,6 @@
         const portId = payload?.item?.port_id;
         if (portId == null) return;
         try {
-            // Pass initial hostname filter of the selected device to Ports view
             const hostname = selectedDeviceRow.value?.hostname || '';
             if (hostname) {
                 window.__PORTS_INITIAL_FILTER__ = { hostname };
@@ -612,7 +607,6 @@
         } catch (e) {
             // noop
         }
-        // Switch to Ports tab in the shell
         try {
             if (typeof window.__SET_ACTIVE_VIEW__ === 'function') {
                 window.__SET_ACTIVE_VIEW__('ports');
