@@ -79,7 +79,7 @@
       :width="'min(1000px, 96vw)'"
     >
       <div class="device-details-block">
-        <DetailsComponent :data="hiddenDetails" :max-lines="5" />
+        <DetailsComponent :data="hiddenDetails" :max-lines="8" />
       </div>
 
       <h4 class="events-section-title">Historic Port Events</h4>
@@ -236,7 +236,7 @@
 
     // Générer dynamiquement les colonnes en s'inspirant de ListDevices.vue
     function generateColumns(portsData) {
-        const columnsToHide = ['ifIndex', 'ne_id', 'device_id', 'hostname', 'sysName', 'sysname', 'adminStatus', 'operStatus', 'port_id', 'mtu', 'HighSpeed', 'PromiscuousMode', 'ConnectorPresent', 'in_octets', 'out_octets', 'Speed'];
+        const columnsToHide = ['ifIndex', 'status', 'ne_id', 'device_id', 'hostname', 'sysName', 'sysname', 'adminStatus', 'operStatus', 'port_id', 'mtu', 'HighSpeed', 'PromiscuousMode', 'ConnectorPresent', 'in_octets', 'out_octets', 'Speed'];
 
         const sample = (Array.isArray(portsData) && portsData.length > 0) ? portsData[0] : {};
         const keys = Object.keys(sample || {});
@@ -311,7 +311,15 @@
                         const value = params.data?.out_octets;
                         return value;
                     }
-                },
+              },
+              {
+                headerName: 'STATUS',
+                colId: 'status',
+                cellRenderer: (params) => {
+                    const value = params.data?.status;
+                    return value ? badgeContainer(String(value).toUpperCase()) : '';
+                }
+              }
             ];
             columns.value = [...deviceCol, ...otherColumns];
         } else {
@@ -360,7 +368,8 @@
         await loadPorts();
     }
 
-    const detailsColumns = ['device_id', 'hostname', 'sysName', 'ifName', 'ifDescr', 'ifAlias', 'ifIndex', 'ifType', 'ifOperStatus', 'ifAdminStatus'];
+    // Show in modal details the same fields as those hidden in the grid
+    const detailsColumns = ['ifIndex', 'status', 'port_id', 'hostname', 'name','description', 'adminStatus', 'operStatus', 'mtu', 'Speed','HighSpeed', 'PromiscuousMode', 'ConnectorPresent', 'in_octets', 'out_octets'];
     const hiddenDetails = computed(() => {
       const row = selectedPortRow.value || null;
       if (!row || typeof row !== 'object') return {};

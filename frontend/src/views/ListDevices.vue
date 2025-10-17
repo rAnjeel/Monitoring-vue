@@ -599,7 +599,22 @@
     }
 
     function onActionItem(payload) {
-        console.log('[CardModal] action', payload);
+        const portId = payload?.item?.port_id;
+        if (portId == null) return;
+        try {
+            // Pass initial filter to Ports view
+            window.__PORTS_INITIAL_FILTER__ = { port_id: { filter: String(portId) } };
+        } catch (e) {
+            // noop
+        }
+        // Switch to Ports tab in the shell
+        try {
+            if (typeof window.__SET_ACTIVE_VIEW__ === 'function') {
+                window.__SET_ACTIVE_VIEW__('ports');
+            }
+        } catch (e) {
+            // noop
+        }
     }
 
     async function validatePortToggles() {
@@ -651,6 +666,7 @@
             if (!Array.isArray(types)) {
                 throw new Error('Réponse inattendue du service type devices');
             }
+            console.log('[LoadTypeDevices] Types:', types);
 
             // data attendu du backend: [{ type_device_id, type_device, total_devices, down_devices }]
             customDevices.value = types.map(t => ({

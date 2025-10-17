@@ -25,4 +25,8 @@
   import './assets/App.css';
 
   const activeView = ref('devices');
+
+  try {
+    window.__SET_ACTIVE_VIEW__ = (view) => { activeView.value = view === 'ports' ? 'ports' : 'devices'; };
+  } catch (_) { /* noop */ }
 </script>
