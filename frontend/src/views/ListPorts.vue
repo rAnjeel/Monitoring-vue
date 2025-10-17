@@ -162,8 +162,8 @@
     import '@/assets/ListPorts.css';
     import '@/assets/Loading.css';
     import AgGridModule from '@/components/AgGridModule.vue';
-    import { ref, onMounted, watch, computed } from 'vue';
-    import { getLimitedPorts } from '@/services/ports/ports';
+    import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
+    import { getLimitedPorts, connectSocket, disconnectSocket, onSocket, offSocket } from '@/services/ports/ports';
     import { badgeContainer, superposeValue, formatDate } from '@/services/utils/utils';
     import AgGridContextMenu from '@/components/AgGridContextMenu.vue';
     import MenuModule from '@/modules/AgGridModule';
@@ -634,10 +634,29 @@
           }
         } catch (_) { /* noop */ }
         await loadPorts();
+
+        // sockets
+        connectSocket({ url: 'http://localhost:3000' });
+        onSocket('ports:bulk_update', async () => {
+          // light debounce not necessary here; reload current page
+          await loadPorts();
+        });
+        onSocket('portEvents:created', async () => {
+          // keep modal events in sync if open
+          if (showEventsModal.value && selectedPortRow.value?.port_id) {
+            await loadPortEvents();
+          }
+        });
     });
 
     watch([() => targetPage.value, () => pageSize.value], async () => {
         await loadPorts();
+    });
+
+    onBeforeUnmount(() => {
+      offSocket('ports:bulk_update');
+      offSocket('portEvents:created');
+      disconnectSocket();
     });
 
 </script>

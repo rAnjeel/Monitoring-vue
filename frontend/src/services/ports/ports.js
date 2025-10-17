@@ -1,4 +1,5 @@
 import axios from 'axios'
+export { connect as connectSocket, disconnect as disconnectSocket, on as onSocket, off as offSocket } from '../devices/deviceSocket'
 
 const api = axios.create({
   baseURL: process.env.VUE_APP_API_BASE_URL || 'http://localhost:3000',
