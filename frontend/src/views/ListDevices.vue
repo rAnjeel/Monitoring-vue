@@ -219,6 +219,7 @@
     import '@/assets/ListDevices.css';
     import '@/assets/Loading.css';
     import '@/assets/AgGrid.css';
+    import '@/assets/App.css';
     import CardNavbar from '@/components/CardNavbar.vue';
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
