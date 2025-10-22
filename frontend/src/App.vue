@@ -19,6 +19,7 @@
       <ListDevices v-if="activeView === 'devices'" />
       <ListPorts v-else-if="activeView === 'ports'" />
       <Reporting v-else-if="activeView === 'reporting'" />
+      <ReportingDevice v-else-if="activeView === 'reporting-device'" />
     </section>
   </div>
 </template>
@@ -27,14 +28,18 @@
   import { ref } from 'vue';
   import ListDevices from './views/ListDevices.vue';
   import ListPorts from './views/ListPorts.vue';
-  import Reporting from './views/Reporting.vue';
+  import Reporting from './views/ReportingGlobal.vue';
+  import ReportingDevice from './views/ReportingDevice.vue';
   import './assets/App.css';
 
   const activeView = ref('devices');
 
   try {
     window.__SET_ACTIVE_VIEW__ = (view) => { 
-      activeView.value = view === 'ports' ? 'ports' : view === 'reporting' ? 'reporting' : 'devices'; 
+      if (view === 'ports') activeView.value = 'ports';
+      else if (view === 'reporting') activeView.value = 'reporting';
+      else if (view === 'reporting-device') activeView.value = 'reporting-device';
+      else activeView.value = 'devices';
     };
   } catch (_) { /* noop */ }
 </script>

@@ -40,6 +40,10 @@
                 <span class="glyphicon glyphicon-download"></span>
                 Export CSV
               </button>
+              <button @click="exportStabilityExcel" class="btn btn-warning btn-sm" :disabled="(deviceStabilityData || []).length === 0">
+                <span class="glyphicon glyphicon-file"></span>
+                Export Excel
+              </button>
             </div>
           </div>
         </div>
@@ -77,10 +81,6 @@
               </select>
             </div>
             <div class="col-md-2">
-              <label class="form-label">Device ID</label>
-              <input type="number" v-model.number="latencyDeviceId" class="form-control input-sm" placeholder="e.g. 123" />
-            </div>
-            <div class="col-md-2">
               <label class="form-label">Status</label>
               <select v-model="latencyStatus" class="form-control input-sm">
                 <option value="">All</option>
@@ -104,6 +104,10 @@
               <button @click="exportLatencyCsv" class="btn btn-success btn-sm" :disabled="(latencyData || []).length === 0">
                 <span class="glyphicon glyphicon-download"></span>
                 Export CSV
+              </button>
+              <button @click="exportLatencyExcel" class="btn btn-warning btn-sm" :disabled="(latencyData || []).length === 0">
+                <span class="glyphicon glyphicon-file"></span>
+                Export Excel
               </button>
             </div>
           </div>
@@ -148,6 +152,7 @@ export default { name: 'ReportingView' };
   import AgGridModule from '@/components/AgGridModule.vue';
   import reportingService from '@/services/reporting/reporting.js';
   import { exportJsonToCsv } from '@/services/csv/exportCSV';
+  import { exportJsonToExcel } from '@/services/excel/exportExcel';
 
   const deviceTypes = ref([]);
   
@@ -278,6 +283,18 @@ export default { name: 'ReportingView' };
     const rows = Array.isArray(latencyData.value) ? latencyData.value : [];
     if (!rows.length) return;
     exportJsonToCsv(rows, 'latency-by-day.csv');
+  }
+
+  function exportStabilityExcel() {
+    const rows = Array.isArray(deviceStabilityData.value) ? deviceStabilityData.value : [];
+    if (!rows.length) return;
+    exportJsonToExcel(rows, 'device-stability.xlsx', 'Device Stability');
+  }
+
+  function exportLatencyExcel() {
+    const rows = Array.isArray(latencyData.value) ? latencyData.value : [];
+    if (!rows.length) return;
+    exportJsonToExcel(rows, 'latency-by-day.xlsx', 'Latency Report');
   }
 
   onMounted(async () => {

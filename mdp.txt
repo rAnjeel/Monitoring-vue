@@ -2,3 +2,19 @@ mdp sql = 'R@bearison21';
 FLUSH PRIVILEGES;
 
 sed -n '/CREATE TABLE `ports`/,/CREATE TABLE/p' EquipementMonitorDump20250911.sql > ports.sql
+
+@ReportingDevice.vue je veux que tu divise en 2 blocs la partie bottom-section . Je veux ajouter les echarts dans Rigth-panel emply placeholder : un echart pour Courbe Latence
+
+Axe X : jour (DATE(e.event_time))
+
+Axe Y : latence moyenne (avg_latency_ms)
+
+Optionnel : zones/min-max autour de la moyenne → min_latency_ms et max_latency_ms. Je veux ajouter dans le premier bottom section:chart : Courbe Jitter
+
+Axe X : jour
+
+Axe Y : jitter (jitter_ms) = max_latency_ms − min_latency_ms. et dans l'autre partie : Courbe Disponibilité
+
+Axe X : jour
+
+Axe Y : disponibilité en pourcentage (availability_percent)
