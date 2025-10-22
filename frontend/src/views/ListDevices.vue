@@ -219,6 +219,7 @@
     import '@/assets/ListDevices.css';
     import '@/assets/Loading.css';
     import '@/assets/AgGrid.css';
+    import '@/assets/App.css';
     import CardNavbar from '@/components/CardNavbar.vue';
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
@@ -355,6 +356,29 @@
             action: async (row) => {
                 selectedDeviceRow.value = row;
                 showExportModal.value = true;
+            }
+        },
+        {
+            id: 'reporting',
+            label: 'Reporting',
+            icon: 'glyphicon glyphicon-stats',
+            action: async (row) => {
+                try {
+                    if (typeof window.__SET_ACTIVE_VIEW__ === 'function') {
+                        window.__SET_ACTIVE_VIEW__('reporting-device');
+                    }
+                    // Store device info for reporting page
+                    window.__REPORTING_DEVICE_INFO__ = {
+                        device_id: row.id,
+                        hostname: row.hostname,
+                        sysName: row.sysName,
+                        location: row.location,
+                        type: row.type_device,
+                        status: row.status
+                    };
+                } catch (e) {
+                    console.error('Error switching to reporting view:', e);
+                }
             }
         }
     ]);

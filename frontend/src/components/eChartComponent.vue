@@ -27,11 +27,13 @@ use([CanvasRenderer, LineChart, TitleComponent, TooltipComponent, GridComponent,
 
 const props = defineProps({
   x: { type: Array, default: () => [] },
-  // y peut maintenant être : soit un tableau de valeurs, soit un tableau d’objets de séries
+  // y peut maintenant être : soit un tableau de valeurs, soit un tableau d'objets de séries
   y: {
     type: [Array, Object],
     default: () => [],
   },
+  yMin: { type: Array, default: () => [] },
+  yMax: { type: Array, default: () => [] },
   title: { type: String, default: '' },
   yLabel: { type: String, default: '' },
   xLabel: { type: String, default: '' },
@@ -58,18 +60,56 @@ const option = computed(() => {
     '#2563eb', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'
   ]
   const isMultiSeries = Array.isArray(props.y) && props.y.length && typeof props.y[0] === 'object' && props.y[0].data
-  const series = isMultiSeries
-    ? props.y.map(s => ({
-        name: s.name,
-        type: 'line',
-        data: s.data,
-        smooth: props.smooth,
-        showSymbol: false,
-        lineStyle: { width: 2.2 },
-        areaStyle: { opacity: 0.06 },
-        emphasis: { lineStyle: { width: 3 } },
-      }))
-    : [
+  const hasMinMaxZones = props.yMin?.length > 0 && props.yMax?.length > 0
+  
+  let series = []
+  
+  if (isMultiSeries) {
+    series = props.y.map(s => ({
+      name: s.name,
+      type: 'line',
+      data: s.data,
+      smooth: props.smooth,
+      showSymbol: false,
+      lineStyle: { width: 2.2 },
+      areaStyle: { opacity: 0.06 },
+      emphasis: { lineStyle: { width: 3 } },
+    }))
+  } else {
+    // Add min/max zone if available
+    if (hasMinMaxZones) {
+      series = [
+        {
+          name: 'Min',
+          type: 'line',
+          data: props.yMin,
+          smooth: props.smooth,
+          showSymbol: false,
+          lineStyle: { width: 1, color: '#94a3b8', type: 'dashed' },
+          areaStyle: null,
+        },
+        {
+          name: 'Max',
+          type: 'line',
+          data: props.yMax,
+          smooth: props.smooth,
+          showSymbol: false,
+          lineStyle: { width: 1, color: '#94a3b8', type: 'dashed' },
+          areaStyle: null,
+        },
+        {
+          name: 'Average',
+          type: 'line',
+          data: props.y,
+          smooth: props.smooth,
+          showSymbol: false,
+          lineStyle: { width: 2.2, color: '#2563eb' },
+          areaStyle: { opacity: 0.1 },
+          emphasis: { lineStyle: { width: 3 } },
+        }
+      ]
+    } else {
+      series = [
         {
           type: 'line',
           data: props.y,
@@ -80,6 +120,8 @@ const option = computed(() => {
           emphasis: { lineStyle: { width: 3 } },
         },
       ]
+    }
+  }
 
   return {
     backgroundColor: 'transparent',
@@ -94,7 +136,7 @@ const option = computed(() => {
       axisPointer: { type: 'line', lineStyle: { color: '#94a3b8', width: 1, type: 'dashed' } },
       padding: 10,
     },
-    legend: isMultiSeries ? { top: 25, icon: 'roundRect', itemWidth: 12, itemHeight: 8, textStyle: { color: '#475569' } } : undefined,
+    legend: (isMultiSeries || hasMinMaxZones) ? { top: 25, icon: 'roundRect', itemWidth: 12, itemHeight: 8, textStyle: { color: '#475569' } } : undefined,
     grid: { left: 48, right: 18, top: props.title ? 44 : 18, bottom: 36, containLabel: true },
     xAxis: {
       type: 'category',
@@ -126,6 +168,11 @@ const option = computed(() => {
   width: 100%;
   padding: 8px 0;
   margin: 12px 0 16px;
+}
+
+.v-chart {
+  width: 100%;
+  height: 100%;
 }
 
 .no-data {
