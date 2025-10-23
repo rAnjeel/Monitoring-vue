@@ -113,16 +113,15 @@ const props = defineProps({
   xLabel: { type: String, default: '' },
   height: { type: String, default: '260px' },
   smooth: { type: Boolean, default: true },
-  // line | line-dot | bar
   chartStyle: {
     type: String,
     default: 'line',
     validator: v => ['line', 'line-dot', 'bar'].includes(v),
   },
-  // Optional rotation for x labels to help readability when dense
   xLabelRotate: { type: Number, default: 0 },
-  // Bar width for bar charts (percentage of category width, 0-1)
   barWidth: { type: Number, default: 0.6 },
+  xLabelInterval: { type: [String, Number], default: 'auto' },
+  yInterval: { type: [String, Number], default: 'auto' },
 })
 
 const hasData = computed(() => {
@@ -147,6 +146,7 @@ const option = computed(() => {
   const hasMinMaxZones = props.yMin?.length > 0 && props.yMax?.length > 0
   const isBar = props.chartStyle === 'bar'
   const isLineWithDots = props.chartStyle === 'line-dot'
+  
   
   let series = []
   
@@ -244,12 +244,13 @@ const option = computed(() => {
       boundaryGap: isBar ? true : false,
       axisTick: { alignWithLabel: true },
       axisLine: { lineStyle: { color: '#cbd5e1' } },
-      axisLabel: { color: '#64748b', hideOverlap: true, interval: 'auto', rotate: props.xLabelRotate, showMinLabel: true, showMaxLabel: true },
+      axisLabel: { color: '#64748b', hideOverlap: true, rotate: props.xLabelRotate, showMinLabel: true, showMaxLabel: true, interval: props.xLabelInterval },
     },
     yAxis: {
       type: 'value',
       name: props.yLabel || undefined,
       axisLine: { show: false },
+      interval: props.yInterval,
       axisLabel: { color: '#64748b', hideOverlap: true, showMinLabel: true, showMaxLabel: true },
       splitLine: { show: true, lineStyle: { type: 'dashed', color: '#e2e8f0' } },
     },

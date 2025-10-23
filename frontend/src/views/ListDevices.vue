@@ -118,6 +118,8 @@
             y-label="ms"
             height="300px"
             :smooth=false
+            :x-label-interval="0"
+            :y-interval="30"
         />
 
         <h3 class="events-section-title">Historic Events</h3>
@@ -327,14 +329,6 @@
             icon: 'glyphicon glyphicon-pencil',
             action: (row) => {
                 console.log('[Action] Edit row:', row);
-            }
-        },
-        {
-            id: 'delete',
-            label: 'Delete',
-            icon: 'glyphicon glyphicon-trash',
-            action: (row) => {
-                console.log('[Action] Delete row:', row);
             }
         },
         {

@@ -131,6 +131,8 @@
               y-label="Latency (ms)"
               x-label="Day"
               chart-style="line-dot"
+              :x-label-interval="1"
+              :y-interval="30"
             />
             <div v-else class="no-data-chart">
               <span class="glyphicon glyphicon-signal"></span>
@@ -160,6 +162,8 @@
             y-label="Jitter (ms)"
             x-label="Day"
             chart-style="line-dot"
+            :x-label-interval="1"
+            :y-interval="30"
           />
           <div v-else class="no-data-chart">
             <span class="glyphicon glyphicon-signal"></span>
@@ -187,6 +191,8 @@
             x-label="Day"
             chart-style="bar"
             :bar-width="0.3"
+            :x-label-interval="0"
+            :y-interval="10"
           />
           <div v-else class="no-data-chart">
             <span class="glyphicon glyphicon-signal"></span>

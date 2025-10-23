@@ -100,6 +100,8 @@
         y-label="Octets"
         height="300px"
         :smooth=false
+        :x-label-interval="1"
+        :y-interval="30"
       />
 
         <div class="events-toolbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px;">
@@ -623,13 +625,11 @@
         try {
           const initial = window.__PORTS_INITIAL_FILTER__ || null;
           if (initial && typeof initial === 'object') {
-            // If a hostname was provided, also reflect it in the input control
             if (initial.hostname) {
               hostnameFilter.value = String(initial.hostname);
             }
             gridFilterModel.value = { ...(gridFilterModel.value || {}), ...initial };
             targetPage.value = 1;
-            // one-shot consume
             window.__PORTS_INITIAL_FILTER__ = null;
           }
         } catch (_) { /* noop */ }
@@ -638,11 +638,9 @@
         // sockets
         connectSocket({ url: 'http://localhost:3000' });
         onSocket('ports:bulk_update', async () => {
-          // light debounce not necessary here; reload current page
           await loadPorts();
         });
         onSocket('portEvents:created', async () => {
-          // keep modal events in sync if open
           if (showEventsModal.value && selectedPortRow.value?.port_id) {
             await loadPortEvents();
           }
