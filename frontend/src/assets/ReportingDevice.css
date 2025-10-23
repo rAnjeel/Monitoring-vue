@@ -23,7 +23,7 @@
 
 .dashboard-header .subtitle {
   color: #7f8c8d;
-  font-size: 1.1rem;
+  font-size: 1.4rem;
   margin: 0;
 }
 
@@ -90,7 +90,7 @@
 
 .bottom-section .chart-section {
   background: white;
-  border-radius: 12px;
+  border-radius: 4px;
   padding: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   height: 315px; /* align with global chart-section height */
@@ -99,7 +99,7 @@
 /* Device Information Card */
 .device-info-card {
   background: linear-gradient(135deg, #1f2937 0%, #0a1f3b 100%);
-  border-radius: 8px;
+  border-radius: 4px;
   padding: 20px;
   color: white;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
@@ -136,6 +136,12 @@
   border: 1px solid rgba(46, 204, 113, 0.3);
 }
 
+.status-badge.offline {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
 .info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -155,7 +161,7 @@
 }
 
 .info-item label {
-  font-size: 0.85rem;
+  font-size: 1.1rem;
   opacity: 0.8;
   font-weight: 500;
 }
@@ -176,8 +182,8 @@
 
 /* Metric Cards */
 .metric-card {
-  background: white;
-  border-radius: 8px;
+  background: #fcfcfc;
+  border-radius: 4px;
   padding: 18px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border: 1px solid #e9ecef;
@@ -221,7 +227,7 @@
 
 .card-title p {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1.0rem;
   color: #7f8c8d;
   font-weight: 500;
 }
@@ -249,12 +255,12 @@
 .metric-value {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   flex: 1;
 }
 
 .metric-value .value {
-  font-size: 1.6rem;
+  font-size: 1.9rem;
   font-weight: 800;
   color: #2c3e50;
 }
@@ -273,26 +279,26 @@
   min-height: 4px;
 }
 
-/* MTTR Card - Red theme */
-.mttr-card {
+/* availability-card - Red theme */
+.availability-card {
   background: #2c3e50;
   color: white;
 }
 
-.mttr-card .card-title h4,
-.mttr-card .card-title p {
+.availability-card .card-title h4,
+.availability-card .card-title p {
   color: white;
 }
 
-.mttr-card .metric-value .value {
+.availability-card .metric-value .value {
   color: white;
 }
 
-.mttr-card .mini-chart .bar {
+.availability-card .mini-chart .bar {
   background: rgba(255, 255, 255, 0.3);
 }
 
-.mttr-card .trend-indicator.negative {
+.availability-card .trend-indicator.negative {
   background-color: rgba(255, 255, 255, 0.2);
   color: white;
 }
@@ -348,41 +354,42 @@
 
 /* Chart Section */
 .chart-section {
-  background: white;
-  border-radius: 12px;
-  padding: 16px; /* reduced to fit 315px total height */
+  background: #fcfcfc;
+  border-radius: 4px;
+  padding: 16px;
   margin-bottom: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   border: 1px solid #e9ecef;
   display: flex;
   flex-direction: column;
-  height: 355px; /* fixed height as requested */
+  height: 355px;
 }
 
 .chart-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px; /* tighter header to free space for chart */
+  margin-bottom: 8px;
   flex-shrink: 0;
 }
 
 .chart-title h3 {
   margin: 0 0 2px 0;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: #2c3e50;
 }
 
 .chart-title p {
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 1.1rem;
   color: #7f8c8d;
 }
 
 .chart-controls {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -391,7 +398,7 @@
   border: 1px solid #ddd;
   border-radius: 6px;
   background: white;
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   color: #2c3e50;
 }
 
@@ -447,7 +454,7 @@
 
 .summary-item label {
   display: block;
-  font-size: 0.85rem;
+  font-size: 1.1rem;
   color: #7f8c8d;
   margin-bottom: 5px;
   font-weight: 500;
@@ -467,7 +474,7 @@
 
 .action-buttons .btn {
   padding: 12px 24px;
-  font-size: 1rem;
+  font-size: 1.4rem;
   border-radius: 8px;
   font-weight: 500;
 }

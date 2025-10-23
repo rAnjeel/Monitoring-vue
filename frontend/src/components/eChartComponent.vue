@@ -2,7 +2,13 @@
   <div class="echart-section">
     <div class="echart-block">
       <template v-if="hasData">
-        <v-chart :option="option" autoresize :style="{ height: props.height }" />
+        <v-chart 
+          ref="chartRef"
+          :option="option" 
+          :autoresize="false"
+          :style="{ height: props.height }"
+          @resize="handleResize"
+        />
       </template>
       <template v-else>
         <div class="no-data">
@@ -16,14 +22,82 @@
 </template>
 
 <script setup>
-import { computed, defineProps } from 'vue'
+import { computed, defineProps, onMounted, onUnmounted, ref, nextTick } from 'vue'
 import { use } from 'echarts/core'
-import { LineChart } from 'echarts/charts'
+import { LineChart, BarChart } from 'echarts/charts'
 import { CanvasRenderer } from 'echarts/renderers'
 import { TitleComponent, TooltipComponent, GridComponent, LegendComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 
-use([CanvasRenderer, LineChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent])
+use([CanvasRenderer, LineChart, BarChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent])
+
+// Global error handler for ResizeObserver
+let resizeObserverErrorHandler = null
+
+onMounted(() => {
+  // Suppress ResizeObserver errors globally
+  resizeObserverErrorHandler = (event) => {
+    if (event.message && event.message.includes('ResizeObserver loop completed with undelivered notifications')) {
+      event.preventDefault()
+      event.stopPropagation()
+      return false
+    }
+  }
+  
+  window.addEventListener('error', resizeObserverErrorHandler)
+  
+  // Also suppress unhandled promise rejections
+  const unhandledRejectionHandler = (event) => {
+    if (event.reason && event.reason.message && event.reason.message.includes('ResizeObserver loop completed with undelivered notifications')) {
+      event.preventDefault()
+      return false
+    }
+  }
+  
+  window.addEventListener('unhandledrejection', unhandledRejectionHandler)
+  
+  // Manual resize observer setup
+  nextTick(() => {
+    if (chartRef.value && window.ResizeObserver) {
+      resizeObserver = new ResizeObserver(() => {
+        // Debounce resize calls
+        clearTimeout(resizeObserver.timeoutId)
+        resizeObserver.timeoutId = setTimeout(() => {
+          if (chartRef.value && chartRef.value.resize) {
+            chartRef.value.resize()
+          }
+        }, 100)
+      })
+      
+      resizeObserver.observe(chartRef.value.$el)
+    }
+  })
+})
+
+onUnmounted(() => {
+  if (resizeObserverErrorHandler) {
+    window.removeEventListener('error', resizeObserverErrorHandler)
+  }
+  
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    if (resizeObserver.timeoutId) {
+      clearTimeout(resizeObserver.timeoutId)
+    }
+  }
+})
+
+const chartRef = ref(null)
+let resizeObserver = null
+
+const handleResize = () => {
+  // Manual resize handling to avoid ResizeObserver issues
+  nextTick(() => {
+    if (chartRef.value && chartRef.value.resize) {
+      chartRef.value.resize()
+    }
+  })
+}
 
 const props = defineProps({
   x: { type: Array, default: () => [] },
@@ -39,6 +113,16 @@ const props = defineProps({
   xLabel: { type: String, default: '' },
   height: { type: String, default: '260px' },
   smooth: { type: Boolean, default: true },
+  // line | line-dot | bar
+  chartStyle: {
+    type: String,
+    default: 'line',
+    validator: v => ['line', 'line-dot', 'bar'].includes(v),
+  },
+  // Optional rotation for x labels to help readability when dense
+  xLabelRotate: { type: Number, default: 0 },
+  // Bar width for bar charts (percentage of category width, 0-1)
+  barWidth: { type: Number, default: 0.6 },
 })
 
 const hasData = computed(() => {
@@ -61,19 +145,24 @@ const option = computed(() => {
   ]
   const isMultiSeries = Array.isArray(props.y) && props.y.length && typeof props.y[0] === 'object' && props.y[0].data
   const hasMinMaxZones = props.yMin?.length > 0 && props.yMax?.length > 0
+  const isBar = props.chartStyle === 'bar'
+  const isLineWithDots = props.chartStyle === 'line-dot'
   
   let series = []
   
   if (isMultiSeries) {
     series = props.y.map(s => ({
       name: s.name,
-      type: 'line',
+      type: isBar ? 'bar' : 'line',
       data: s.data,
-      smooth: props.smooth,
-      showSymbol: false,
-      lineStyle: { width: 2.2 },
-      areaStyle: { opacity: 0.06 },
-      emphasis: { lineStyle: { width: 3 } },
+      smooth: !isBar && props.smooth,
+      showSymbol: isBar ? false : (isLineWithDots ? true : false),
+      symbolSize: isLineWithDots ? 4 : 0,
+      lineStyle: isBar ? undefined : { width: 2.2 },
+      areaStyle: isBar ? undefined : { opacity: 0.06 },
+      emphasis: { lineStyle: isBar ? undefined : { width: 3 } },
+      clip: false,
+      barWidth: isBar ? `${props.barWidth * 100}%` : undefined,
     }))
   } else {
     // Add min/max zone if available
@@ -87,6 +176,7 @@ const option = computed(() => {
           showSymbol: false,
           lineStyle: { width: 1, color: '#94a3b8', type: 'dashed' },
           areaStyle: null,
+          clip: false,
         },
         {
           name: 'Max',
@@ -96,28 +186,35 @@ const option = computed(() => {
           showSymbol: false,
           lineStyle: { width: 1, color: '#94a3b8', type: 'dashed' },
           areaStyle: null,
+          clip: false,
         },
         {
           name: 'Average',
-          type: 'line',
+          type: isBar ? 'bar' : 'line',
           data: props.y,
-          smooth: props.smooth,
-          showSymbol: false,
-          lineStyle: { width: 2.2, color: '#2563eb' },
-          areaStyle: { opacity: 0.1 },
-          emphasis: { lineStyle: { width: 3 } },
+          smooth: !isBar && props.smooth,
+          showSymbol: isBar ? false : (isLineWithDots ? true : false),
+          symbolSize: isLineWithDots ? 4 : 0,
+          lineStyle: isBar ? undefined : { width: 2.2, color: '#2563eb' },
+          areaStyle: isBar ? undefined : { opacity: 0.1 },
+          emphasis: { lineStyle: isBar ? undefined : { width: 3 } },
+          clip: false,
+          barWidth: isBar ? `${props.barWidth * 100}%` : undefined,
         }
       ]
     } else {
       series = [
         {
-          type: 'line',
+          type: isBar ? 'bar' : 'line',
           data: props.y,
-          smooth: props.smooth,
-          showSymbol: false,
-          lineStyle: { width: 2.2 },
-          areaStyle: { opacity: 0.06 },
-          emphasis: { lineStyle: { width: 3 } },
+          smooth: !isBar && props.smooth,
+          showSymbol: isBar ? false : (isLineWithDots ? true : false),
+          symbolSize: isLineWithDots ? 4 : 0,
+          lineStyle: isBar ? undefined : { width: 2.2 },
+          areaStyle: isBar ? undefined : { opacity: 0.06 },
+          emphasis: { lineStyle: isBar ? undefined : { width: 3 } },
+          clip: false,
+          barWidth: isBar ? `${props.barWidth * 100}%` : undefined,
         },
       ]
     }
@@ -126,6 +223,7 @@ const option = computed(() => {
   return {
     backgroundColor: 'transparent',
     color: palette,
+    animation: false, // Disable animations to reduce resize issues
     title: props.title ? { text: props.title, left: 'center', top: 6, textStyle: { fontSize: 13, fontWeight: 600, color: '#0f172a' } } : undefined,
     tooltip: {
       trigger: 'axis',
@@ -133,27 +231,29 @@ const option = computed(() => {
       borderColor: 'rgba(148,163,184,0.25)',
       borderWidth: 1,
       textStyle: { color: '#e2e8f0' },
-      axisPointer: { type: 'line', lineStyle: { color: '#94a3b8', width: 1, type: 'dashed' } },
+      axisPointer: { type: 'line', snap: true, lineStyle: { color: '#94a3b8', width: 1, type: 'dashed' } },
       padding: 10,
     },
     legend: (isMultiSeries || hasMinMaxZones) ? { top: 25, icon: 'roundRect', itemWidth: 12, itemHeight: 8, textStyle: { color: '#475569' } } : undefined,
-    grid: { left: 48, right: 18, top: props.title ? 44 : 18, bottom: 36, containLabel: true },
+    grid: { left: 56, right: 24, top: props.title ? 48 : 20, bottom: 40, containLabel: true },
     xAxis: {
       type: 'category',
       data: props.x,
       name: props.xLabel || undefined,
       nameLocation: 'end',
+      boundaryGap: isBar ? true : false,
       axisTick: { alignWithLabel: true },
       axisLine: { lineStyle: { color: '#cbd5e1' } },
-      axisLabel: { color: '#64748b' },
+      axisLabel: { color: '#64748b', hideOverlap: true, interval: 'auto', rotate: props.xLabelRotate, showMinLabel: true, showMaxLabel: true },
     },
     yAxis: {
       type: 'value',
       name: props.yLabel || undefined,
       axisLine: { show: false },
-      axisLabel: { color: '#64748b' },
+      axisLabel: { color: '#64748b', hideOverlap: true, showMinLabel: true, showMaxLabel: true },
       splitLine: { show: true, lineStyle: { type: 'dashed', color: '#e2e8f0' } },
     },
+    // Keep series inside view while avoiding clipping of symbols/lines
     series,
   }
 })

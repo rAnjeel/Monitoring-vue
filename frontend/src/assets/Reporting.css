@@ -155,8 +155,8 @@ body {
 
 /* Main Container - Clean Style */
 .main-container {
-    background-color: white;
-    border-radius: 8px;
+    background-color: #fcfcfc;
+    border-radius: 4px;
     padding: 20px;
     margin: 0 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -187,6 +187,7 @@ body {
 .input-field .form-control {
     border: 1px solid #ced4da;
     border-radius: 4px;
+    height: 35px;
     padding: 8px 12px;
     font-size: 14px;
     width: 100%;
@@ -202,6 +203,7 @@ body {
 /* Action Buttons Row */
 .action-buttons-row {
     display: flex;
+    justify-content: flex-end;
     gap: 10px;
     margin-bottom: 30px;
     flex-wrap: wrap;
@@ -226,7 +228,7 @@ body {
 /* Content Display Area */
 .content-display-area {
     background-color: #f8f9fa;
-    border-radius: 8px;
+    border-radius: 4px;
     min-height: 500px;
     padding: 20px;
 }

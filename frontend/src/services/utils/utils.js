@@ -88,6 +88,18 @@ export function badgeContainer(value) {
           container.style.backgroundColor = "#e3fcec";
           container.style.color = "#27ae60";
           break;
+      case "Unstable":
+          container.style.backgroundColor = "#ffe9d5";
+          container.style.color = "#c0392b";
+          break;
+      case "Stable":
+          container.style.backgroundColor = "#e3fcec";
+          container.style.color = "#27ae60";
+          break;
+      case "To monitor":
+          container.style.backgroundColor = "#e8f4ff";
+          container.style.color = "#1074e7";
+          break;
       case "DOWN":
           container.style.backgroundColor = "#fdecea";
           container.style.color = "#e74c3c";

@@ -360,7 +360,7 @@
         },
         {
             id: 'reporting',
-            label: 'Reporting',
+            label: 'Overview',
             icon: 'glyphicon glyphicon-stats',
             action: async (row) => {
                 try {
@@ -374,7 +374,7 @@
                         sysName: row.sysName,
                         location: row.location,
                         type: row.type_device,
-                        status: row.status
+                        status: row.ping_status
                     };
                 } catch (e) {
                     console.error('Error switching to reporting view:', e);

@@ -124,13 +124,13 @@ class ReportingService {
     }
   }
 
-  // Get MTTR (Mean Time To Recovery) for a device
-  async getMTTR(device_id) {
+  // Get Availability (SLA) for a device
+  async getAvailability(device_id) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/reporting/mttr/${device_id}`);
+      const response = await axios.get(`${API_BASE_URL}/reporting/availability/${device_id}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching MTTR:', error);
+      console.error('Error fetching Availability:', error);
       throw error;
     }
   }

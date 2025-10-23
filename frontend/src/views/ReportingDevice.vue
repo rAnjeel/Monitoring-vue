@@ -2,8 +2,19 @@
   <div class="dashboard-container">
     <!-- Header -->
     <div class="dashboard-header">
-      <h1>Dashboard Metrics</h1>
-      <p class="subtitle">System performance overview</p>
+      <h3 class="text-uppercase">Dashboard Metrics</h3>
+      <p class="subtitle">Device performance overview</p>
+      <div class="chart-controls">
+        <select v-model="selectedPeriod" class="period-selector" @change="loadAllChartData">
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+        <button class="btn btn-sm btn-primary" @click="loadAllChartData">
+          <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loadingCharts }"></span>
+          Refresh
+        </button>
+      </div>
     </div>
 
     <!-- Top Section -->
@@ -50,33 +61,26 @@
 
         <!-- Metrics Cards -->
         <div class="metrics-row">
-          <!-- MTTR Card -->
-          <div class="metric-card mttr-card">
+          <!-- Availability Card -->
+          <div class="metric-card availability-card">
             <div class="card-header">
               <div class="card-title">
-                <span class="glyphicon glyphicon-time"></span>
-                <h4>MTTR</h4>
-                <p>Mean Time To Recovery</p>
+                <span class="glyphicon glyphicon-ok-circle"></span>
+                <h4>Availability</h4>
+                <p>System Uptime Percentage</p>
               </div>
             </div>
             <div class="card-content">
-              <div v-if="loadingMTTR" class="loading-spinner">
+              <div v-if="loadingAvailability" class="loading-spinner">
                 <span class="glyphicon glyphicon-refresh spinning"></span>
                 Loading...
               </div>
-              <div v-else-if="mttrData.length > 0" class="metric-value">
-                <span class="value">{{ formatHours(mttrData[0].MTTR_hours) }}</span>
-                <div class="mini-chart">
-                  <div class="bar" style="height: 60%"></div>
-                  <div class="bar" style="height: 80%"></div>
-                  <div class="bar" style="height: 45%"></div>
-                  <div class="bar" style="height: 90%"></div>
-                  <div class="bar" style="height: 70%"></div>
-                </div>
+              <div v-else-if="deviceAvailabilityData.length > 0" class="metric-value">
+                <span class="value">{{ formatPercentage(deviceAvailabilityData[0].availability_percent) }}</span>
               </div>
               <div v-else class="no-data">
                 <span class="glyphicon glyphicon-info-sign"></span>
-                No MTTR data available
+                No Availability data available
               </div>
             </div>
           </div>
@@ -96,14 +100,7 @@
                 Loading...
               </div>
               <div v-else-if="mtbfData.length > 0" class="metric-value">
-                <span class="value">{{ formatHours(mtbfData[0].MTBF_hours) }}</span>
-                <div class="mini-chart">
-                  <div class="bar" style="height: 70%"></div>
-                  <div class="bar" style="height: 85%"></div>
-                  <div class="bar" style="height: 60%"></div>
-                  <div class="bar" style="height: 95%"></div>
-                  <div class="bar" style="height: 80%"></div>
-                </div>
+                <span class="value">{{ mtbfData[0].MTBF_hours }} hours</span>
               </div>
               <div v-else class="no-data">
                 <span class="glyphicon glyphicon-info-sign"></span>
@@ -133,7 +130,7 @@
               title=""
               y-label="Latency (ms)"
               x-label="Day"
-              :smooth="true"
+              chart-style="line-dot"
             />
             <div v-else class="no-data-chart">
               <span class="glyphicon glyphicon-signal"></span>
@@ -152,17 +149,6 @@
             <h3>Jitter per Day</h3>
             <p>Network stability analysis</p>
           </div>
-          <div class="chart-controls">
-            <select v-model="selectedPeriod" class="period-selector" @change="loadAllChartData">
-              <option value="7">Last 7 days</option>
-              <option value="30">Last 30 days</option>
-              <option value="90">Last 90 days</option>
-            </select>
-            <button class="btn btn-sm btn-primary" @click="loadAllChartData">
-              <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loadingCharts }"></span>
-              Refresh
-            </button>
-          </div>
         </div>
         
         <div class="chart-container">
@@ -173,7 +159,7 @@
             title=""
             y-label="Jitter (ms)"
             x-label="Day"
-            :smooth="true"
+            chart-style="line-dot"
           />
           <div v-else class="no-data-chart">
             <span class="glyphicon glyphicon-signal"></span>
@@ -199,7 +185,8 @@
             title=""
             y-label="Availability (%)"
             x-label="Day"
-            :smooth="true"
+            chart-style="bar"
+            :bar-width="0.3"
           />
           <div v-else class="no-data-chart">
             <span class="glyphicon glyphicon-signal"></span>
@@ -239,9 +226,9 @@ export default { name: 'ReportingDeviceView' };
   import { formatDate } from '@/services/utils/utils.js';
 
   const deviceInfo = ref({});
-  const mttrData = ref([]);
+  const deviceAvailabilityData = ref([]);
   const mtbfData = ref([]);
-  const loadingMTTR = ref(false);
+  const loadingAvailability = ref(false);
   const loadingMTBF = ref(false);
   const loadingCharts = ref(false);
   const error = ref(null);
@@ -262,14 +249,9 @@ export default { name: 'ReportingDeviceView' };
   const availabilityChartData = ref({ x: [], y: [] });
   const availabilitySummary = ref(null);
 
-  function formatHours(hours) {
-    if (!hours || hours === 0) return '0h 0m';
-    
-    const totalMinutes = Math.round(hours * 60);
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-    
-    return `${h}h ${m}m`;
+  function formatPercentage(percentage) {
+    if (!percentage || percentage === 0) return '0%';
+    return `${Math.round(percentage * 100) / 100}%`;
   }
 
   function goBack() {
@@ -283,20 +265,20 @@ export default { name: 'ReportingDeviceView' };
   }
 
 
-  async function loadMTTR() {
+  async function loadAvailability() {
     if (!deviceInfo.value.device_id) return;
     
     try {
-      loadingMTTR.value = true;
+      loadingAvailability.value = true;
       error.value = null;
-      const data = await reportingService.getMTTR(deviceInfo.value.device_id);
-      mttrData.value = Array.isArray(data?.rows) ? data.rows : (Array.isArray(data) ? data : []);
+      const data = await reportingService.getAvailability(deviceInfo.value.device_id);
+      deviceAvailabilityData.value = Array.isArray(data?.rows) ? data.rows : (Array.isArray(data) ? data : []);
     } catch (e) {
-      console.error('[ReportingDevice] getMTTR failed:', e?.message || e);
-      error.value = 'Failed to load MTTR data';
-      mttrData.value = [];
+      console.error('[ReportingDevice] getAvailability failed:', e?.message || e);
+      error.value = 'Failed to load Availability data';
+      deviceAvailabilityData.value = [];
     } finally {
-      loadingMTTR.value = false;
+      loadingAvailability.value = false;
     }
   }
 
@@ -477,7 +459,7 @@ export default { name: 'ReportingDeviceView' };
       if (storedDeviceInfo) {
         deviceInfo.value = storedDeviceInfo;
         // Default to last 7 days is already set via selectedPeriod = '7'
-        await Promise.all([loadMTTR(), loadMTBF(), loadAllChartData()]);
+        await Promise.all([loadAvailability(), loadMTBF(), loadAllChartData()]);
         // React to period changes
         watch(selectedPeriod, () => {
           loadAllChartData();
