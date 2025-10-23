@@ -14,7 +14,11 @@ const countryFormats = {
   },
   TS: {
     locale: enUS,
-    pattern: 'timestamp' // format spécial
+    pattern: 'timestamp'
+  },
+  HMS: {
+    locale: enUS,
+    pattern: 'h:mm:ss'
   },
 }
 
@@ -46,6 +50,10 @@ export function formatDateUS(date, pattern) {
 
 export function formatDateTimestamp(date) {
   return formatDate(date, 'TS')
+}
+
+export function formatDateMinuteSecond(date) {
+  return formatDate(date, 'HMS')
 }
 
 // Conversion d’état en texte

@@ -132,7 +132,6 @@ const hasData = computed(() => {
     if (typeof props.y[0] !== 'object') {
       return props.y.some(v => v != null && !isNaN(v))
     }
-    // si y est une liste d’objets { name, data }
     return props.y.some(s => Array.isArray(s.data) && s.data.some(v => v != null && !isNaN(v)))
   }
   return false
@@ -254,7 +253,6 @@ const option = computed(() => {
       axisLabel: { color: '#64748b', hideOverlap: true, showMinLabel: true, showMaxLabel: true },
       splitLine: { show: true, lineStyle: { type: 'dashed', color: '#e2e8f0' } },
     },
-    // Keep series inside view while avoiding clipping of symbols/lines
     series,
   }
 })

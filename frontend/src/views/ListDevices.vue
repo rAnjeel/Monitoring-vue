@@ -109,11 +109,17 @@
           </template>
         </CardModalComponent>
 
-        <h3 class="events-section-title">Ping results variations</h3>
+        <div class="events-header">
+            <h3 class="events-section-title">Ping results variations</h3>
+            <select v-model="selectedMetric" class="metric-select">
+                <option value="latency">Latency</option>
+                <option value="loss">Loss</option>
+            </select>
+        </div>
         <eChartComponent
             :x="eventsChartX"
             :y="chartSeries"
-            title="Latency"
+            :title="chartTitle"
             x-label="Time"
             y-label="ms"
             height="300px"
@@ -229,7 +235,7 @@
     import { getLimitedDevices, getPortsDevice, exportDeviceReportingCsv } from '@/services/devices/devices';   
     import { switchPortMonitored } from '@/services/ports/ports';
     import { getTypeDevicesCounts } from '@/services/type devices/typeDevices';   
-    import { formatDate, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
+    import { formatDate, formatDateMinuteSecond, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
     import AgGridContextMenu from '@/components/AgGridContextMenu.vue';
     import MenuModule from '@/modules/AgGridModule';
     import ModalComponent from '@/components/ModalComponent.vue';
@@ -261,6 +267,7 @@
     const portsCards = ref([]);
     const pendingToggles = ref(new Map());
     const pendingCount = computed(() => pendingToggles.value.size);
+    const selectedMetric = ref('latency');
     const eventsPage = ref(1);
     const eventsPageSize = ref(20);
     const eventsStartDate = ref('');
@@ -292,19 +299,28 @@
     );
 
     const eventsChartX = computed(() =>
-    sortedEvents.value.map(r => r?.event_time ? formatDate(r.event_time, 'HH:mm:ss') : '')
+    sortedEvents.value.map(r => r?.event_time ? formatDateMinuteSecond(r.event_time) : '')
     );
+
+    const chartTitle = computed(() => {
+        return selectedMetric.value === 'latency' ? 'Latency' : 'Loss'
+    });
+
 
     const chartSeries = computed(() => {
         const threshold = Number( process.env.VUE_PING_LOSS_THRESHOLD || 10)
         const length = sortedEvents.value.length
         const thresholdLine = Array.from({ length }, () => threshold)
+        if (selectedMetric.value === 'loss') {
+            return [
+                { name: 'LOSS', data: sortedEvents.value.map(r => Number(r?.loss ?? 0)) },
+                { name: `UP THRESH (${threshold}%)`, data: thresholdLine }
+            ]
+        }
         return [
             { name: 'AVG',  data: sortedEvents.value.map(r => Number(r?.avg ?? 0)) },
             { name: 'MIN',  data: sortedEvents.value.map(r => Number(r?.min ?? 0)) },
             { name: 'MAX',  data: sortedEvents.value.map(r => Number(r?.max ?? 0)) },
-            { name: 'LOSS', data: sortedEvents.value.map(r => Number(r?.loss ?? 0)) },
-            { name: `UP THRESH (${threshold}%)`, data: thresholdLine }
         ]
     });
 
@@ -887,7 +903,7 @@
     });
 
     // Watcher pour la pagination des historiques
-    watch([() => eventsPage.value, () => eventsPageSize.value], async () => {
+    watch([() => eventsPage.value, () => eventsPageSize.value, () => selectedMetric.value ], async () => {
         if (selectedDeviceRow.value?.id) {
             await loadDeviceEvents();
         }
