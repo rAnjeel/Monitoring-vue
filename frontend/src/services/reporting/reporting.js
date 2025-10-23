@@ -44,7 +44,8 @@ class ReportingService {
           start_date: params.start_date,
           end_date: params.end_date,
           type_device: params.type_device,
-          device_id: params.device_id
+          device_id: params.device_id,
+          group_by: params.group_by,
         }
       });
       return response.data;
@@ -56,34 +57,16 @@ class ReportingService {
 
   // Build chart-ready latency data (x: days, y: average latency, yMin: min latency, yMax: max latency)
   async getLatencyChartData(params = {}) {
+    // Récupère directement les lignes agrégées par jour depuis SQL
     const apiData = await this.getAverageLatencyByDayAndSite(params);
     const rows = Array.isArray(apiData?.rows) ? apiData.rows : (Array.isArray(apiData) ? apiData : []);
 
+    // Cas sans données
     if (!rows.length) {
       return { x: [], y: [], yMin: [], yMax: [], summary: null, rows: [] };
     }
 
-    const dayToValues = new Map();
-    const dayToMinValues = new Map();
-    const dayToMaxValues = new Map();
-    
-    for (const item of rows) {
-      const dayKey = item.jour || 'Unknown';
-      const avgValue = Number(item.avg_latency_ms || 0);
-      const minValue = Number(item.min_latency_ms || 0);
-      const maxValue = Number(item.max_latency_ms || 0);
-      
-      if (!dayToValues.has(dayKey)) {
-        dayToValues.set(dayKey, []);
-        dayToMinValues.set(dayKey, []);
-        dayToMaxValues.set(dayKey, []);
-      }
-      
-      dayToValues.get(dayKey).push(avgValue);
-      dayToMinValues.get(dayKey).push(minValue);
-      dayToMaxValues.get(dayKey).push(maxValue);
-    }
-
+    // Format des dates (axe X)
     const formatDay = (d) => {
       try {
         return formatDate(d, 'FR', 'dd/MM/yyyy');
@@ -91,32 +74,15 @@ class ReportingService {
         return String(d);
       }
     };
-    const x = Array.from(dayToValues.keys()).map(formatDay).sort();
-    const y = x.map((day) => {
-      const list = dayToValues.get(day) || [];
-      if (!list.length) return 0;
-      const sum = list.reduce((s, v) => s + v, 0);
-      return Math.round((sum / list.length) * 100) / 100;
-    });
-    
-    const yMin = x.map((day) => {
-      const list = dayToMinValues.get(day) || [];
-      if (!list.length) return 0;
-      const sum = list.reduce((s, v) => s + v, 0);
-      return Math.round((sum / list.length) * 100) / 100;
-    });
-    
-    const yMax = x.map((day) => {
-      const list = dayToMaxValues.get(day) || [];
-      if (!list.length) return 0;
-      const sum = list.reduce((s, v) => s + v, 0);
-      return Math.round((sum / list.length) * 100) / 100;
-    });
 
-    const flat = rows
-      .map((r) => Number(r.avg_latency_ms || 0))
-      .filter((n) => Number.isFinite(n));
+    // Prépare les séries pour ECharts
+    const x = rows.map(r => formatDay(r.jour));
+    const y = rows.map(r => Number(r.avg_latency_ms || 0));
+    const yMin = rows.map(r => Number(r.min_latency_ms || 0));
+    const yMax = rows.map(r => Number(r.max_latency_ms || 0));
 
+    // Résumé global
+    const flat = y.filter(n => Number.isFinite(n));
     const summary = flat.length
       ? {
           average: Math.round((flat.reduce((s, v) => s + v, 0) / flat.length) * 100) / 100,
@@ -125,8 +91,10 @@ class ReportingService {
         }
       : null;
 
+    // Retour final (prêt pour le graphique)
     return { x, y, yMin, yMax, summary, rows };
   }
+
 
   // Get device stability status
   async getDeviceStabilityStatus(params = {}) {

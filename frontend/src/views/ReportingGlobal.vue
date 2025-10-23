@@ -10,28 +10,50 @@
     </div>
 
     <div class="content-wrapper">
-      <!-- Device Stability Section -->
-      <div class="reporting-section">
-        <div class="filter-section">
-          <div class="row" style="align-items:center;">
-            <div class="col-md-3">
-              <label class="form-label">Device type</label>
-              <select v-model="selectedDeviceType" class="form-control input-sm">
-                <option value="">All</option>
-                <option v-for="t in deviceTypes" :key="t.id" :value="t.id">
-                  {{ t.name }}
-                </option>
-              </select>
+      <!-- Tab Navigation -->
+      <div class="tab-navigation">
+        <div 
+          class="tab-item" 
+          :class="{ 'active': activeTab === 'latency' }"
+          @click="setActiveTab('latency')"
+        >
+          <span class="tab-text">Average latency by day</span>
+        </div>
+        <div 
+          class="tab-item" 
+          :class="{ 'active': activeTab === 'stability' }"
+          @click="setActiveTab('stability')"
+        >
+          <span class="tab-text">Devices stability status</span>
+        </div>
+
+      </div>
+
+      <!-- Main Container -->
+      <div class="main-container">
+        <!-- Content Display Area -->
+          <!-- Device Stability Section -->
+          <div v-if="activeTab === 'stability'">
+            <div class="input-row">
+              <div class="input-field">
+                <label class="form-label">Device type</label>
+                <select v-model="selectedDeviceType" class="form-control input-sm">
+                  <option value="">All</option>
+                  <option v-for="t in deviceTypes" :key="t.id" :value="t.id">
+                    {{ t.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="input-field">
+                <label class="form-label">Start date</label>
+                <input type="datetime-local" v-model="startDate" class="form-control input-sm" />
+              </div>
+              <div class="input-field">
+                <label class="form-label">End date</label>
+                <input type="datetime-local" v-model="endDate" class="form-control input-sm" />
+              </div>
             </div>
-            <div class="col-md-3">
-              <label class="form-label">Start date</label>
-              <input type="datetime-local" v-model="startDate" class="form-control input-sm" />
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">End date</label>
-              <input type="datetime-local" v-model="endDate" class="form-control input-sm" />
-            </div>
-            <div class="col-md-3" style="display:flex;gap:8px;align-items:end;">
+            <div class="action-buttons-row">
               <button @click="loadDeviceStability" class="btn btn-primary btn-sm" :disabled="loading">
                 <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
                 Load Stability
@@ -45,58 +67,38 @@
                 Export Excel
               </button>
             </div>
+
+              <AgGridModule
+                grid-id="reporting-stability-grid"
+                :column-defs="stabilityColumns"
+                :row-data="deviceStabilityData"
+              />
           </div>
-        </div>
 
-        <div class="sub-navbar">
-          <div class="nav nav-tabs">
-            <h5 class="text-uppercase" style="color:#ecf0f1; gap:12px;">
-              <span class="glyphicon glyphicon-triangle-right" aria-hidden="true" style="margin-right: 6px;"></span>
-              <span>Devices stability status</span>
-              <span class="label label-primary" title="Total">{{ deviceStabilityData.length }}</span>
-            </h5>
-          </div>
-        </div>
+          <!-- Latency Section -->
+          <div v-if="activeTab === 'latency'">
+            <div class="input-row">
+              <div class="input-field">
+                <label class="form-label">Device type</label>
+                <select v-model="selectedDeviceType" class="form-control input-sm">
+                  <option value="">All</option>
+                  <option v-for="t in deviceTypes" :key="t.id" :value="t.id">
+                    {{ t.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="input-field">
+                <label class="form-label">Start date</label>
+                <input type="datetime-local" v-model="startDate" class="form-control input-sm" />
+              </div>
+              <div class="input-field">
+                <label class="form-label">End date</label>
+                <input type="datetime-local" v-model="endDate" class="form-control input-sm" />
+              </div>
+            </div>
 
-        <div class="app-container">
-          <AgGridModule
-            grid-id="reporting-stability-grid"
-            :column-defs="stabilityColumns"
-            :row-data="deviceStabilityData"
-          />
-        </div>
-      </div>
 
-      <!-- Latency Section -->
-      <div class="reporting-section">
-        <div class="filter-section">
-          <div class="row" style="align-items:center;">
-            <div class="col-md-2">
-              <label class="form-label">Device type</label>
-              <select v-model="latencyDeviceType" class="form-control input-sm">
-                <option value="">All</option>
-                <option v-for="t in deviceTypes" :key="t.id" :value="t.id">
-                  {{ t.name }}
-                </option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Status</label>
-              <select v-model="latencyStatus" class="form-control input-sm">
-                <option value="">All</option>
-                <option value="up">Up</option>
-                <option value="down">Down</option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Start date</label>
-              <input type="datetime-local" v-model="latencyStartDate" class="form-control input-sm" />
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">End date</label>
-              <input type="datetime-local" v-model="latencyEndDate" class="form-control input-sm" />
-            </div>
-            <div class="col-md-2" style="display:flex;gap:8px;align-items:end;">
+            <div class="action-buttons-row">
               <button @click="loadLatency" class="btn btn-info btn-sm" :disabled="loadingLatency">
                 <span class="glyphicon glyphicon-signal" :class="{ 'spinning': loadingLatency }"></span>
                 Load Latency
@@ -110,26 +112,13 @@
                 Export Excel
               </button>
             </div>
-          </div>
-        </div>
 
-        <div class="sub-navbar">
-          <div class="nav nav-tabs">
-            <h5 class="text-uppercase" style="color:#ecf0f1; gap:12px;">
-              <span class="glyphicon glyphicon-triangle-right" aria-hidden="true" style="margin-right: 6px;"></span>
-              <span>Average latency by day and device</span>
-              <span class="label label-primary" title="Total">{{ latencyData.length }}</span>
-            </h5>
+            <AgGridModule
+              grid-id="reporting-latency-grid"
+              :column-defs="latencyColumns"
+              :row-data="latencyData"
+            />
           </div>
-        </div>
-
-        <div class="app-container">
-          <AgGridModule
-            grid-id="reporting-latency-grid"
-            :column-defs="latencyColumns"
-            :row-data="latencyData"
-          />
-        </div>
       </div>
 
       <div v-if="error" class="alert alert-danger" style="margin-top: 10px;">
@@ -156,6 +145,9 @@ export default { name: 'ReportingView' };
 
   const deviceTypes = ref([]);
   
+  // Tab management
+  const activeTab = ref('latency');
+  
   // Stability section variables
   const selectedDeviceType = ref('');
   const startDate = ref('');
@@ -164,11 +156,6 @@ export default { name: 'ReportingView' };
   const deviceStabilityData = ref([]);
 
   // Latency section variables
-  const latencyDeviceType = ref('');
-  const latencyDeviceId = ref(null);
-  const latencyStatus = ref('');
-  const latencyStartDate = ref('');
-  const latencyEndDate = ref('');
   const loadingLatency = ref(false);
   const latencyData = ref([]);
 
@@ -212,13 +199,9 @@ export default { name: 'ReportingView' };
     const now = new Date();
     const ago = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     
-    // Initialize stability dates
+    // Initialize dates for both stability and latency
     endDate.value = now.toISOString().slice(0, 16);
     startDate.value = ago.toISOString().slice(0, 16);
-    
-    // Initialize latency dates
-    latencyEndDate.value = now.toISOString().slice(0, 16);
-    latencyStartDate.value = ago.toISOString().slice(0, 16);
   }
 
   async function loadDeviceStability() {
@@ -247,7 +230,7 @@ export default { name: 'ReportingView' };
   }
 
   async function loadLatency() {
-    if (!latencyStartDate.value || !latencyEndDate.value) {
+    if (!startDate.value || !endDate.value) {
       error.value = 'Please select start and end dates for latency';
       return;
     }
@@ -255,13 +238,13 @@ export default { name: 'ReportingView' };
       loadingLatency.value = true;
       error.value = null;
       const params = {
-        start_date: new Date(latencyStartDate.value).toISOString(),
-        end_date: new Date(latencyEndDate.value).toISOString(),
-        type_device: latencyDeviceType.value || undefined,
-        device_id: latencyDeviceId.value || undefined,
-        status: latencyStatus.value || undefined,
+        start_date: new Date(startDate.value).toISOString(),
+        end_date: new Date(endDate.value).toISOString(),
+        type_device: selectedDeviceType.value || undefined,
+        group_by: 'site',
       };
       const data = await reportingService.getAverageLatencyByDayAndSite(params);
+      console.log('data latency', data);
       latencyData.value = Array.isArray(data?.rows) ? data.rows : (Array.isArray(data) ? data : []);
     } catch (e) {
       // eslint-disable-next-line no-console
@@ -279,22 +262,26 @@ export default { name: 'ReportingView' };
     exportJsonToCsv(rows, 'device-stability.csv');
   }
 
-  function exportLatencyCsv() {
-    const rows = Array.isArray(latencyData.value) ? latencyData.value : [];
-    if (!rows.length) return;
-    exportJsonToCsv(rows, 'latency-by-day.csv');
-  }
-
   function exportStabilityExcel() {
     const rows = Array.isArray(deviceStabilityData.value) ? deviceStabilityData.value : [];
     if (!rows.length) return;
     exportJsonToExcel(rows, 'device-stability.xlsx', 'Device Stability');
   }
 
+  function exportLatencyCsv() {
+    const rows = Array.isArray(latencyData.value) ? latencyData.value : [];
+    if (!rows.length) return;
+    exportJsonToCsv(rows, 'latency-by-day.csv');
+  }
+
   function exportLatencyExcel() {
     const rows = Array.isArray(latencyData.value) ? latencyData.value : [];
     if (!rows.length) return;
     exportJsonToExcel(rows, 'latency-by-day.xlsx', 'Latency Report');
+  }
+
+  function setActiveTab(tab) {
+    activeTab.value = tab;
   }
 
   onMounted(async () => {

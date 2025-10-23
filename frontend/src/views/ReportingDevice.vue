@@ -332,7 +332,8 @@ export default { name: 'ReportingDeviceView' };
       const params = {
         start_date: startDate.toISOString(),
         end_date: endDate.toISOString(),
-        device_id: deviceInfo.value.device_id
+        device_id: deviceInfo.value.device_id,
+        group_by: 'jour',
       };
       
       // Load all chart data in parallel
