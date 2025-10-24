@@ -128,6 +128,11 @@
             :smooth=false
             :x-label-interval="0"
             :y-interval="30"
+            :enable-zoom="true"
+            :data-zoom="[
+              { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
+              { type: 'slider', xAxisIndex: 0, height: 18, bottom: 8 }
+            ]"
         />
 
         <h3 class="events-section-title">Historic Events</h3>

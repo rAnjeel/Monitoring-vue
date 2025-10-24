@@ -93,7 +93,7 @@
   border-radius: 4px;
   padding: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  height: 315px; /* align with global chart-section height */
+  height: 360px; /* align with global chart-section height */
 }
 
 /* Device Information Card */

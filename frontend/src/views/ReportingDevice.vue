@@ -118,21 +118,36 @@
               <h3>Latency per Day</h3>
               <p>Network performance with min/max zones</p>
             </div>
+            <button 
+              @click="toggleLatencyZoom" 
+              class="btn btn-sm" 
+              :class="latencyZoomEnabled ? 'btn-primary' : 'btn-default'"
+              style="margin-left: auto;"
+            >
+              <span class="glyphicon" :class="latencyZoomEnabled ? 'glyphicon-zoom-out' : 'glyphicon-zoom-in'"></span>
+              {{ latencyZoomEnabled ? 'Reset Zoom' : 'Zoom to Fit' }}
+            </button>
           </div>
           
           <div class="chart-container">
             <eChartComponent
               v-if="latencyChartData.x.length > 0"
+              :key="'latency-' + latencyZoomEnabled"
               :x="latencyChartData.x"
               :y="latencyChartData.y"
-              :y-min="latencyChartData.yMin"
-              :y-max="latencyChartData.yMax"
-              title=""
+              :title="latencyChartTitle"
               y-label="Latency (ms)"
               x-label="Day"
               chart-style="line-dot"
               :x-label-interval="1"
               :y-interval="30"
+              :y-axis-min="latencyAxisBounds.min"
+              :y-axis-max="latencyAxisBounds.max"
+              :enable-zoom="true"
+              :data-zoom="[
+                { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
+                { type: 'slider', xAxisIndex: 0, height: 18, bottom: 8 }
+              ]"
             />
             <div v-else class="no-data-chart">
               <span class="glyphicon glyphicon-signal"></span>
@@ -161,9 +176,14 @@
             title=""
             y-label="Jitter (ms)"
             x-label="Day"
-            chart-style="line-dot"
+            chart-style="bar"
             :x-label-interval="1"
             :y-interval="30"
+            :enable-zoom="true"
+            :data-zoom="[
+              { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
+              { type: 'slider', xAxisIndex: 0, height: 18, bottom: 8 }
+            ]"
           />
           <div v-else class="no-data-chart">
             <span class="glyphicon glyphicon-signal"></span>
@@ -179,20 +199,37 @@
             <h3>Availability per Day</h3>
             <p>System uptime analysis</p>
           </div>
+          <button 
+            @click="toggleAvailabilityZoom" 
+            class="btn btn-sm" 
+            :class="availabilityZoomEnabled ? 'btn-primary' : 'btn-default'"
+            style="margin-left: auto;"
+          >
+            <span class="glyphicon" :class="availabilityZoomEnabled ? 'glyphicon-zoom-out' : 'glyphicon-zoom-in'"></span>
+            {{ availabilityZoomEnabled ? 'Reset Zoom' : 'Zoom to Fit' }}
+          </button>
         </div>
         
         <div class="chart-container">
           <eChartComponent
             v-if="availabilityChartData.x.length > 0"
+            :key="'availability-' + availabilityZoomEnabled"
             :x="availabilityChartData.x"
             :y="availabilityChartData.y"
-            title=""
+            :title="availabilityChartTitle"
             y-label="Availability (%)"
             x-label="Day"
-            chart-style="bar"
+            chart-style="line-dot"
             :bar-width="0.3"
             :x-label-interval="0"
             :y-interval="10"
+            :y-axis-min="availabilityAxisBounds.min"
+            :y-axis-max="availabilityAxisBounds.max"
+            :enable-zoom="true"
+            :data-zoom="[
+              { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
+              { type: 'slider', xAxisIndex: 0, height: 18, bottom: 8 }
+            ]"
           />
           <div v-else class="no-data-chart">
             <span class="glyphicon glyphicon-signal"></span>
@@ -226,7 +263,7 @@ export default { name: 'ReportingDeviceView' };
   import '@/assets/App.css';
   import '@/assets/CardContainer.css';
   import '@/assets/ReportingDevice.css';
-  import { ref, onMounted, watch } from 'vue';
+  import { ref, computed, onMounted, watch } from 'vue';
   import reportingService from '@/services/reporting/reporting.js';
   import eChartComponent from '@/components/eChartComponent.vue';
   import { formatDate } from '@/services/utils/utils.js';
@@ -254,6 +291,84 @@ export default { name: 'ReportingDeviceView' };
   const availabilityData = ref([]);
   const availabilityChartData = ref({ x: [], y: [] });
   const availabilitySummary = ref(null);
+
+  // Zoom toggle states for each chart
+  const latencyZoomEnabled = ref(true);
+  const availabilityZoomEnabled = ref(true);
+
+  // Helper function to calculate Y-axis bounds with margin
+  function calculateAxisBounds(dataArray, marginPercent = 10) {
+    if (!dataArray || dataArray.length === 0) return { min: null, max: null };
+    
+    const validValues = dataArray.filter(v => v != null && !isNaN(v) && isFinite(v));
+    if (validValues.length === 0) return { min: null, max: null };
+    
+    const min = Math.min(...validValues);
+    const max = Math.max(...validValues);
+    
+    // If all values are the same, add fixed margin
+    if (min === max) {
+      const margin = Math.max(Math.abs(min) * 0.1, 1);
+      return {
+        min: Math.floor(min - margin),
+        max: Math.ceil(max + margin)
+      };
+    }
+    
+    const range = max - min;
+    const margin = range * (marginPercent / 100);
+    
+    return {
+      min: Math.floor(min - margin),
+      max: Math.ceil(max + margin)
+    };
+  }
+
+  // Computed properties for Y-axis bounds
+  const latencyAxisBounds = computed(() => {
+    if (!latencyZoomEnabled.value) return { min: null, max: null };
+    // Use all data points from the chart (avg, min, max)
+    const allValues = [
+      ...latencyChartData.value.y,
+    ];
+    return calculateAxisBounds(allValues, 10);
+  });
+
+
+  const availabilityAxisBounds = computed(() => {
+    if (!availabilityZoomEnabled.value) return { min: null, max: null };
+    // For availability, use smaller margin since it's percentage-based
+    const bounds = calculateAxisBounds(availabilityChartData.value.y, 5);
+    // Ensure we don't go below 0 or above 100 for percentages
+    return {
+      min: Math.max(0, bounds.min),
+      max: Math.min(100, bounds.max)
+    };
+  });
+
+  // Computed titles with Y-axis range information
+  const latencyChartTitle = computed(() => {
+    if (!latencyZoomEnabled.value) return '';
+    if (latencyAxisBounds.value.min === null || latencyAxisBounds.value.max === null) return '';
+    return `Latency (Zoom: ${latencyAxisBounds.value.min}-${latencyAxisBounds.value.max}ms)`;
+  });
+
+
+  const availabilityChartTitle = computed(() => {
+    if (!availabilityZoomEnabled.value) return '';
+    if (availabilityAxisBounds.value.min === null || availabilityAxisBounds.value.max === null) return '';
+    return `Availability (Zoom: ${availabilityAxisBounds.value.min}-${availabilityAxisBounds.value.max}%)`;
+  });
+
+  // Toggle functions
+  function toggleLatencyZoom() {
+    latencyZoomEnabled.value = !latencyZoomEnabled.value;
+  }
+
+
+  function toggleAvailabilityZoom() {
+    availabilityZoomEnabled.value = !availabilityZoomEnabled.value;
+  }
 
   function formatPercentage(percentage) {
     if (!percentage || percentage === 0) return '0%';

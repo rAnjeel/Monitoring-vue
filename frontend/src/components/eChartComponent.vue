@@ -26,10 +26,10 @@ import { computed, defineProps, onMounted, onUnmounted, ref, nextTick } from 'vu
 import { use } from 'echarts/core'
 import { LineChart, BarChart } from 'echarts/charts'
 import { CanvasRenderer } from 'echarts/renderers'
-import { TitleComponent, TooltipComponent, GridComponent, LegendComponent } from 'echarts/components'
+import { TitleComponent, TooltipComponent, GridComponent, LegendComponent, DataZoomComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 
-use([CanvasRenderer, LineChart, BarChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent])
+use([CanvasRenderer, LineChart, BarChart, TitleComponent, TooltipComponent, GridComponent, LegendComponent, DataZoomComponent])
 
 // Global error handler for ResizeObserver
 let resizeObserverErrorHandler = null
@@ -101,7 +101,6 @@ const handleResize = () => {
 
 const props = defineProps({
   x: { type: Array, default: () => [] },
-  // y peut maintenant être : soit un tableau de valeurs, soit un tableau d'objets de séries
   y: {
     type: [Array, Object],
     default: () => [],
@@ -122,6 +121,10 @@ const props = defineProps({
   barWidth: { type: Number, default: 0.6 },
   xLabelInterval: { type: [String, Number], default: 'auto' },
   yInterval: { type: [String, Number], default: 'auto' },
+  enableZoom: { type: Boolean, default: true },
+  dataZoom: { type: Array, default: null },
+  yAxisMin: { type: [Number, String], default: null },
+  yAxisMax: { type: [Number, String], default: null },
 })
 
 const hasData = computed(() => {
@@ -162,6 +165,13 @@ const option = computed(() => {
       emphasis: { lineStyle: isBar ? undefined : { width: 3 } },
       clip: false,
       barWidth: isBar ? `${props.barWidth * 100}%` : undefined,
+      label: isBar ? {
+        show: true,
+        position: 'top',
+        formatter: '{c}',
+        fontSize: 11,
+        color: '#475569'
+      } : undefined,
     }))
   } else {
     // Add min/max zone if available
@@ -199,6 +209,13 @@ const option = computed(() => {
           emphasis: { lineStyle: isBar ? undefined : { width: 3 } },
           clip: false,
           barWidth: isBar ? `${props.barWidth * 100}%` : undefined,
+          label: isBar ? {
+            show: true,
+            position: 'top',
+            formatter: '{c}',
+            fontSize: 11,
+            color: '#475569'
+          } : undefined,
         }
       ]
     } else {
@@ -214,6 +231,13 @@ const option = computed(() => {
           emphasis: { lineStyle: isBar ? undefined : { width: 3 } },
           clip: false,
           barWidth: isBar ? `${props.barWidth * 100}%` : undefined,
+          label: isBar ? {
+            show: true,
+            position: 'top',
+            formatter: '{c}',
+            fontSize: 11,
+            color: '#475569'
+          } : undefined,
         },
       ]
     }
@@ -234,7 +258,7 @@ const option = computed(() => {
       padding: 10,
     },
     legend: (isMultiSeries || hasMinMaxZones) ? { top: 25, icon: 'roundRect', itemWidth: 12, itemHeight: 8, textStyle: { color: '#475569' } } : undefined,
-    grid: { left: 56, right: 24, top: props.title ? 48 : 20, bottom: 40, containLabel: true },
+    grid: { left: 56, right: 24, top: props.title ? 48 : 20, bottom: isBar ? 60 : 40, containLabel: true },
     xAxis: {
       type: 'category',
       data: props.x,
@@ -250,9 +274,15 @@ const option = computed(() => {
       name: props.yLabel || undefined,
       axisLine: { show: false },
       interval: props.yInterval,
+      min: props.yAxisMin !== null ? props.yAxisMin : undefined,
+      max: props.yAxisMax !== null ? props.yAxisMax : undefined,
       axisLabel: { color: '#64748b', hideOverlap: true, showMinLabel: true, showMaxLabel: true },
       splitLine: { show: true, lineStyle: { type: 'dashed', color: '#e2e8f0' } },
     },
+    dataZoom: props.enableZoom ? (props.dataZoom || [
+      { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
+      { type: 'slider', xAxisIndex: 0, height: 16, bottom: isBar ? 8 : 10 }
+    ]) : undefined,
     series,
   }
 })
