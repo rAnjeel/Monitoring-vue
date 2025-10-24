@@ -28,7 +28,7 @@ body {
 .device-card {
     flex: 0 0 var(--card-basis, calc(15% - 12px)); /* Overridable via CSS variable */
     min-width: var(--card-min-width, 120px);
-    background: linear-gradient(135deg, #3498db, #2980b9);
+    background: linear-gradient(135deg, #4b759a, #527fa6);
     border-radius: 4px;
     padding: 10px 5px;
     text-align: center;
@@ -44,7 +44,7 @@ body {
 }
 
 .device-card.active {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    background: linear-gradient(135deg, #f5462f, #f34932);
 }
 
 .device-number {
