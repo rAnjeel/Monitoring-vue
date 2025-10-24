@@ -18,7 +18,11 @@ const countryFormats = {
   },
   HMS: {
     locale: enUS,
-    pattern: 'h:mm:ss'
+    pattern: 'H:mm:ss'
+  },
+  DATE_ONLY: {
+    locale: enUS,
+    pattern: 'yyyy-MM-dd'
   },
 }
 
@@ -54,6 +58,11 @@ export function formatDateTimestamp(date) {
 
 export function formatDateMinuteSecond(date) {
   return formatDate(date, 'HMS')
+}
+
+// Nouveau : format YYYY-MM-DD
+export function formatDateOnly(date) {
+  return formatDate(date, 'DATE_ONLY')
 }
 
 // Conversion d’état en texte

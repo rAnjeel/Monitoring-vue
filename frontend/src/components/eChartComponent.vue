@@ -125,6 +125,11 @@ const props = defineProps({
   dataZoom: { type: Array, default: null },
   yAxisMin: { type: [Number, String], default: null },
   yAxisMax: { type: [Number, String], default: null },
+  colorPalette: { 
+    type: String, 
+    default: 'default',
+    validator: v => ['default', 'warm', 'cool', 'green', 'purple', 'orange'].includes(v)
+  },
 })
 
 const hasData = computed(() => {
@@ -141,9 +146,16 @@ const hasData = computed(() => {
 })
 
 const option = computed(() => {
-  const palette = [
-    '#2563eb', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'
-  ]
+  // Color palettes
+  const palettes = {
+    default: ['#2563eb', '#16a34a', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316'],
+    warm: ['#f97316', '#ef4444', '#f59e0b', '#dc2626', '#ea580c', '#fb923c', '#fdba74'],
+    cool: ['#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#14b8a6'],
+    green: ['#16a34a', '#22c55e', '#4ade80', '#86efac', '#10b981', '#059669', '#047857'],
+    purple: ['#8b5cf6', '#a855f7', '#c084fc', '#d8b4fe', '#7c3aed', '#6d28d9', '#5b21b6'],
+    orange: ['#f97316', '#fb923c', '#fdba74', '#ea580c', '#c2410c', '#9a3412', '#7c2d12']
+  }
+  const palette = palettes[props.colorPalette] || palettes.default
   const isMultiSeries = Array.isArray(props.y) && props.y.length && typeof props.y[0] === 'object' && props.y[0].data
   const hasMinMaxZones = props.yMin?.length > 0 && props.yMax?.length > 0
   const isBar = props.chartStyle === 'bar'

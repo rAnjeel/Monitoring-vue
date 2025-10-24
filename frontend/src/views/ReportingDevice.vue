@@ -118,41 +118,73 @@
               <h3>Latency per Day</h3>
               <p>Network performance with min/max zones</p>
             </div>
-            <button 
-              @click="toggleLatencyZoom" 
-              class="btn btn-sm" 
-              :class="latencyZoomEnabled ? 'btn-primary' : 'btn-default'"
-              style="margin-left: auto;"
-            >
-              <span class="glyphicon" :class="latencyZoomEnabled ? 'glyphicon-zoom-out' : 'glyphicon-zoom-in'"></span>
-              {{ latencyZoomEnabled ? 'Reset Zoom' : 'Zoom to Fit' }}
-            </button>
+            <div style="display: flex; gap: 8px; margin-left: auto;">
+              <button 
+                @click="toggleLatencyView" 
+                class="btn btn-sm btn-default"
+                :title="latencyViewMode === 'chart' ? 'Switch to Table' : 'Switch to Chart'"
+              >
+                <span class="glyphicon" :class="latencyViewMode === 'chart' ? 'glyphicon-th-list' : 'glyphicon-stats'"></span>
+              </button>
+              <template v-if="latencyViewMode === 'table'">
+                <button @click="exportLatencyCSV" class="btn btn-sm btn-success">
+                  <span class="glyphicon glyphicon-file"></span> CSV
+                </button>
+                <button @click="exportLatencyExcel" class="btn btn-sm btn-success">
+                  <span class="glyphicon glyphicon-list-alt"></span> Excel
+                </button>
+              </template>
+              <button 
+                v-if="latencyViewMode === 'chart'"
+                @click="toggleLatencyZoom" 
+                class="btn btn-sm" 
+                :class="latencyZoomEnabled ? 'btn-primary' : 'btn-default'"
+              >
+                <span class="glyphicon" :class="latencyZoomEnabled ? 'glyphicon-zoom-out' : 'glyphicon-zoom-in'"></span>
+                {{ latencyZoomEnabled ? 'Reset Zoom' : 'Zoom to Fit' }}
+              </button>
+            </div>
           </div>
           
           <div class="chart-container">
-            <eChartComponent
-              v-if="latencyChartData.x.length > 0"
-              :key="'latency-' + latencyZoomEnabled"
-              :x="latencyChartData.x"
-              :y="latencyChartData.y"
-              :title="latencyChartTitle"
-              y-label="Latency (ms)"
-              x-label="Day"
-              chart-style="line-dot"
-              :x-label-interval="1"
-              :y-interval="30"
-              :y-axis-min="latencyAxisBounds.min"
-              :y-axis-max="latencyAxisBounds.max"
-              :enable-zoom="true"
-              :data-zoom="[
-                { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
-                { type: 'slider', xAxisIndex: 0, height: 18, bottom: 8 }
-              ]"
-            />
-            <div v-else class="no-data-chart">
-              <span class="glyphicon glyphicon-signal"></span>
-              <p>No latency data available</p>
-            </div>
+            <template v-if="latencyViewMode === 'chart'">
+              <eChartComponent
+                v-if="latencyChartData.x.length > 0"
+                :key="'latency-' + latencyZoomEnabled"
+                :x="latencyChartData.x"
+                :y="latencyChartData.y"
+                :title="latencyChartTitle"
+                y-label="Latency (ms)"
+                x-label="Day"
+                chart-style="line-dot"
+                :x-label-interval="1"
+                :y-interval="30"
+                :y-axis-min="latencyAxisBounds.min"
+                :y-axis-max="latencyAxisBounds.max"
+                :enable-zoom="true"
+                :data-zoom="[
+                  { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
+                  { type: 'slider', xAxisIndex: 0, height: 18, bottom: 8 }
+                ]"
+              />
+              <div v-else class="no-data-chart">
+                <span class="glyphicon glyphicon-signal"></span>
+                <p>No latency data available</p>
+              </div>
+            </template>
+            <template v-else>
+              <AgGridModule
+                v-if="latencyTableRows.length > 0"
+                grid-id="latency-table-grid"
+                :column-defs="latencyTableColumns"
+                :row-data="latencyTableRows"
+                row-selection="single"
+              />
+              <div v-else class="no-data-chart">
+                <span class="glyphicon glyphicon-signal"></span>
+                <p>No latency data available</p>
+              </div>
+            </template>
           </div>
         </div>
     </div>
@@ -166,29 +198,62 @@
             <h3>Jitter per Day</h3>
             <p>Network stability analysis</p>
           </div>
+          <div style="display: flex; gap: 8px; margin-left: auto;">
+            <button 
+              @click="toggleJitterView" 
+              class="btn btn-sm btn-default"
+              :title="jitterViewMode === 'chart' ? 'Switch to Table' : 'Switch to Chart'"
+            >
+              <span class="glyphicon" :class="jitterViewMode === 'chart' ? 'glyphicon-th-list' : 'glyphicon-stats'"></span>
+            </button>
+            <template v-if="jitterViewMode === 'table'">
+              <button @click="exportJitterCSV" class="btn btn-sm btn-success">
+                <span class="glyphicon glyphicon-file"></span> CSV
+              </button>
+              <button @click="exportJitterExcel" class="btn btn-sm btn-success">
+                <span class="glyphicon glyphicon-list-alt"></span> Excel
+              </button>
+            </template>
+          </div>
         </div>
         
         <div class="chart-container">
-          <eChartComponent
-            v-if="jitterChartData.x.length > 0"
-            :x="jitterChartData.x"
-            :y="jitterChartData.y"
-            title=""
-            y-label="Jitter (ms)"
-            x-label="Day"
-            chart-style="bar"
-            :x-label-interval="1"
-            :y-interval="30"
-            :enable-zoom="true"
-            :data-zoom="[
-              { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
-              { type: 'slider', xAxisIndex: 0, height: 18, bottom: 8 }
-            ]"
-          />
-          <div v-else class="no-data-chart">
-            <span class="glyphicon glyphicon-signal"></span>
-            <p>No jitter data available</p>
-          </div>
+          <template v-if="jitterViewMode === 'chart'">
+            <eChartComponent
+              v-if="jitterChartData.x.length > 0"
+              :x="jitterChartData.x"
+              :y="jitterChartData.y"
+              title=""
+              y-label="Jitter (ms)"
+              x-label="Day"
+              chart-style="bar"
+              :x-label-interval="1"
+              :y-interval="30"
+              :enable-zoom="true"
+              :data-zoom="[
+                { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
+                { type: 'slider', xAxisIndex: 0, height: 18, bottom: 8 }
+              ]"
+              color-palette="orange"
+            />
+            <div v-else class="no-data-chart">
+              <span class="glyphicon glyphicon-signal"></span>
+              <p>No jitter data available</p>
+            </div>
+          </template>
+          <template v-else>
+            <AgGridModule
+              v-if="jitterTableRows.length > 0"
+              grid-id="jitter-table-grid"
+              :column-defs="jitterTableColumns"
+              :row-data="jitterTableRows"
+              row-selection="single"
+            />
+            <div v-else class="no-data-chart">
+              <span class="glyphicon glyphicon-signal"></span>
+              <p>No jitter data available</p>
+            </div>
+          </template>
         </div>
       </div>
 
@@ -199,42 +264,75 @@
             <h3>Availability per Day</h3>
             <p>System uptime analysis</p>
           </div>
-          <button 
-            @click="toggleAvailabilityZoom" 
-            class="btn btn-sm" 
-            :class="availabilityZoomEnabled ? 'btn-primary' : 'btn-default'"
-            style="margin-left: auto;"
-          >
-            <span class="glyphicon" :class="availabilityZoomEnabled ? 'glyphicon-zoom-out' : 'glyphicon-zoom-in'"></span>
-            {{ availabilityZoomEnabled ? 'Reset Zoom' : 'Zoom to Fit' }}
-          </button>
+          <div style="display: flex; gap: 8px; margin-left: auto;">
+            <button 
+              @click="toggleAvailabilityView" 
+              class="btn btn-sm btn-default"
+              :title="availabilityViewMode === 'chart' ? 'Switch to Table' : 'Switch to Chart'"
+            >
+              <span class="glyphicon" :class="availabilityViewMode === 'chart' ? 'glyphicon-th-list' : 'glyphicon-stats'"></span>
+            </button>
+            <template v-if="availabilityViewMode === 'table'">
+              <button @click="exportAvailabilityCSV" class="btn btn-sm btn-success">
+                <span class="glyphicon glyphicon-file"></span> CSV
+              </button>
+              <button @click="exportAvailabilityExcel" class="btn btn-sm btn-success">
+                <span class="glyphicon glyphicon-list-alt"></span> Excel
+              </button>
+            </template>
+            <button 
+              v-if="availabilityViewMode === 'chart'"
+              @click="toggleAvailabilityZoom" 
+              class="btn btn-sm" 
+              :class="availabilityZoomEnabled ? 'btn-primary' : 'btn-default'"
+            >
+              <span class="glyphicon" :class="availabilityZoomEnabled ? 'glyphicon-zoom-out' : 'glyphicon-zoom-in'"></span>
+              {{ availabilityZoomEnabled ? 'Reset Zoom' : 'Zoom to Fit' }}
+            </button>
+          </div>
         </div>
         
         <div class="chart-container">
-          <eChartComponent
-            v-if="availabilityChartData.x.length > 0"
-            :key="'availability-' + availabilityZoomEnabled"
-            :x="availabilityChartData.x"
-            :y="availabilityChartData.y"
-            :title="availabilityChartTitle"
-            y-label="Availability (%)"
-            x-label="Day"
-            chart-style="line-dot"
-            :bar-width="0.3"
-            :x-label-interval="0"
-            :y-interval="10"
-            :y-axis-min="availabilityAxisBounds.min"
-            :y-axis-max="availabilityAxisBounds.max"
-            :enable-zoom="true"
-            :data-zoom="[
-              { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
-              { type: 'slider', xAxisIndex: 0, height: 18, bottom: 8 }
-            ]"
-          />
-          <div v-else class="no-data-chart">
-            <span class="glyphicon glyphicon-signal"></span>
-            <p>No availability data available</p>
-          </div>
+          <template v-if="availabilityViewMode === 'chart'">
+            <eChartComponent
+              v-if="availabilityChartData.x.length > 0"
+              :key="'availability-' + availabilityZoomEnabled"
+              :x="availabilityChartData.x"
+              :y="availabilityChartData.y"
+              :title="availabilityChartTitle"
+              y-label="Availability (%)"
+              x-label="Day"
+              chart-style="line-dot"
+              :bar-width="0.3"
+              :x-label-interval="0"
+              :y-interval="10"
+              :y-axis-min="availabilityAxisBounds.min"
+              :y-axis-max="availabilityAxisBounds.max"
+              :enable-zoom="true"
+              :data-zoom="[
+                { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
+                { type: 'slider', xAxisIndex: 0, height: 18, bottom: 8 }
+              ]"
+              color-palette="green"
+            />
+            <div v-else class="no-data-chart">
+              <span class="glyphicon glyphicon-signal"></span>
+              <p>No availability data available</p>
+            </div>
+          </template>
+          <template v-else>
+            <AgGridModule
+              v-if="availabilityTableRows.length > 0"
+              grid-id="availability-table-grid"
+              :column-defs="availabilityTableColumns"
+              :row-data="availabilityTableRows"
+              row-selection="single"
+            />
+            <div v-else class="no-data-chart">
+              <span class="glyphicon glyphicon-signal"></span>
+              <p>No availability data available</p>
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -266,7 +364,10 @@ export default { name: 'ReportingDeviceView' };
   import { ref, computed, onMounted, watch } from 'vue';
   import reportingService from '@/services/reporting/reporting.js';
   import eChartComponent from '@/components/eChartComponent.vue';
-  import { formatDate } from '@/services/utils/utils.js';
+  import AgGridModule from '@/components/AgGridModule.vue';
+  import { formatDate, formatDateOnly } from '@/services/utils/utils.js';
+  import { exportJsonToCsv } from '@/services/csv/exportCSV.js';
+  import { exportJsonToExcel } from '@/services/excel/exportExcel.js';
 
   const deviceInfo = ref({});
   const deviceAvailabilityData = ref([]);
@@ -295,6 +396,11 @@ export default { name: 'ReportingDeviceView' };
   // Zoom toggle states for each chart
   const latencyZoomEnabled = ref(true);
   const availabilityZoomEnabled = ref(true);
+
+  // View mode toggle (chart or table)
+  const latencyViewMode = ref('chart'); // 'chart' or 'table'
+  const jitterViewMode = ref('chart');
+  const availabilityViewMode = ref('chart');
 
   // Helper function to calculate Y-axis bounds with margin
   function calculateAxisBounds(dataArray, marginPercent = 10) {
@@ -365,10 +471,122 @@ export default { name: 'ReportingDeviceView' };
     latencyZoomEnabled.value = !latencyZoomEnabled.value;
   }
 
-
   function toggleAvailabilityZoom() {
     availabilityZoomEnabled.value = !availabilityZoomEnabled.value;
   }
+
+  // View mode toggle functions
+  function toggleLatencyView() {
+    latencyViewMode.value = latencyViewMode.value === 'chart' ? 'table' : 'chart';
+  }
+
+  function toggleJitterView() {
+    jitterViewMode.value = jitterViewMode.value === 'chart' ? 'table' : 'chart';
+  }
+
+  function toggleAvailabilityView() {
+    availabilityViewMode.value = availabilityViewMode.value === 'chart' ? 'table' : 'chart';
+  }
+
+  // Export functions
+  function exportLatencyCSV() {
+    if (latencyTableRows.value.length === 0) {
+      alert('No data to export');
+      return;
+    }
+    const filename = `latency_${deviceInfo.value.hostname || 'device'}_${new Date().toISOString().split('T')[0]}.csv`;
+    exportJsonToCsv(latencyTableRows.value, filename);
+  }
+
+  function exportLatencyExcel() {
+    if (latencyTableRows.value.length === 0) {
+      alert('No data to export');
+      return;
+    }
+    const filename = `latency_${deviceInfo.value.hostname || 'device'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    exportJsonToExcel(latencyTableRows.value, filename, 'Latency Data');
+  }
+
+  function exportJitterCSV() {
+    if (jitterTableRows.value.length === 0) {
+      alert('No data to export');
+      return;
+    }
+    const filename = `jitter_${deviceInfo.value.hostname || 'device'}_${new Date().toISOString().split('T')[0]}.csv`;
+    exportJsonToCsv(jitterTableRows.value, filename);
+  }
+
+  function exportJitterExcel() {
+    if (jitterTableRows.value.length === 0) {
+      alert('No data to export');
+      return;
+    }
+    const filename = `jitter_${deviceInfo.value.hostname || 'device'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    exportJsonToExcel(jitterTableRows.value, filename, 'Jitter Data');
+  }
+
+  function exportAvailabilityCSV() {
+    if (availabilityTableRows.value.length === 0) {
+      alert('No data to export');
+      return;
+    }
+    const filename = `availability_${deviceInfo.value.hostname || 'device'}_${new Date().toISOString().split('T')[0]}.csv`;
+    exportJsonToCsv(availabilityTableRows.value, filename);
+  }
+
+  function exportAvailabilityExcel() {
+    if (availabilityTableRows.value.length === 0) {
+      alert('No data to export');
+      return;
+    }
+    const filename = `availability_${deviceInfo.value.hostname || 'device'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    exportJsonToExcel(availabilityTableRows.value, filename, 'Availability Data');
+  }
+
+  // Table column definitions
+  const latencyTableColumns = ref([
+    { headerName: 'Day', field: 'day', minWidth: 120, valueFormatter: params => formatDateOnly(params.value) },
+    { headerName: 'Average (ms)', field: 'avg', minWidth: 120 },
+    { headerName: 'Min (ms)', field: 'min', minWidth: 120 },
+    { headerName: 'Max (ms)', field: 'max', minWidth: 120 },
+  ]);
+
+  const jitterTableColumns = ref([
+    { headerName: 'Day', field: 'day', minWidth: 90, valueFormatter: params => formatDateOnly(params.value) },
+    { headerName: 'Jitter (ms)', field: 'jitter', minWidth: 100 },
+  ]);
+
+  const availabilityTableColumns = ref([
+    { headerName: 'Day', field: 'day', minWidth: 360, valueFormatter: params => formatDateOnly(params.value) },
+    { headerName: 'Availability (%)', field: 'availability', minWidth: 390 },
+  ]);
+
+  // Table data rows computed
+  const latencyTableRows = computed(() => {
+    if (!latencyData.value || latencyData.value.length === 0) return [];
+    return latencyData.value.map(item => ({
+      day: item.jour || '',
+      avg: item.avg_latency_ms?.toFixed(2) || '0',
+      min: item.min_latency_ms?.toFixed(2) || '0',
+      max: item.max_latency_ms?.toFixed(2) || '0',
+    }));
+  });
+
+  const jitterTableRows = computed(() => {
+    if (!jitterData.value || jitterData.value.length === 0) return [];
+    return jitterData.value.map(item => ({
+      day: item.jour || '',
+      jitter: item.jitter_ms?.toFixed(2) || '0',
+    }));
+  });
+
+  const availabilityTableRows = computed(() => {
+    if (!availabilityData.value || availabilityData.value.length === 0) return [];
+    return availabilityData.value.map(item => ({
+      day: item.jour || '',
+      availability: item.availability_percent || '0',
+    }));
+  });
 
   function formatPercentage(percentage) {
     if (!percentage || percentage === 0) return '0%';
@@ -574,14 +792,11 @@ export default { name: 'ReportingDeviceView' };
   }
 
   onMounted(async () => {
-    // Get device info from global variable
     try {
       const storedDeviceInfo = window.__REPORTING_DEVICE_INFO__;
       if (storedDeviceInfo) {
         deviceInfo.value = storedDeviceInfo;
-        // Default to last 7 days is already set via selectedPeriod = '7'
         await Promise.all([loadAvailability(), loadMTBF(), loadAllChartData()]);
-        // React to period changes
         watch(selectedPeriod, () => {
           loadAllChartData();
         });
