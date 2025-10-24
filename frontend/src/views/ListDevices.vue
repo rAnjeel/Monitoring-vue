@@ -226,6 +226,24 @@
         </div>
       </div>
     </ModalComponent>
+
+    <!-- EDIT DEVICE MODAL -->
+    <ModalComponent
+        v-model="showEditDeviceModal"
+        :title="`Update Device - ${editDeviceData?.hostname || ''}`"
+        :width="'min(800px, 96vw)'"
+        :maxHeight="'80vh'"
+    >
+        <FormComponent
+            v-if="editDeviceData"
+            :form-title="'Device Information'"
+            :inputs="deviceFormInputs"
+            :buttons="deviceFormButtons"
+            :initial-data="editDeviceData"
+            @submit="handleUpdateDevice"
+            @cancel="handleCancelEdit"
+        />
+    </ModalComponent>
   </div>
 </template>
 
@@ -239,7 +257,7 @@
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
     import { connect as connectSocket, disconnect as disconnectSocket, on as onSocket, off as offSocket } from '@/services/devices/deviceSocket';
-    import { getLimitedDevices, getPortsDevice, exportDeviceReportingCsv } from '@/services/devices/devices';   
+    import { getLimitedDevices, getPortsDevice, exportDeviceReportingCsv, updateDevice } from '@/services/devices/devices';   
     import { switchPortMonitored } from '@/services/ports/ports';
     import { getTypeDevicesCounts } from '@/services/type devices/typeDevices';   
     import { formatDate, formatDateMinuteSecond, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
@@ -250,6 +268,7 @@
     import { getDeviceEventsByDeviceId } from '@/services/devices/deviceEvents';
     import DetailsComponent from '@/components/DetailsComponent.vue';
     import CardModalComponent from '@/components/CardModalComponent.vue';
+    import FormComponent from '@/components/FormComponent.vue';
 
     const customDevices = ref([]);
     const deviceNav = ref(null);
@@ -269,7 +288,9 @@
     const totalCountDisplay = ref(0);
     const showImportDevices = ref(false);
     const showEventsModal = ref(false);
+    const showEditDeviceModal = ref(false);
     const selectedDeviceRow = ref(null);
+    const editDeviceData = ref(null);
     const eventsRows = ref([]);
     const portsCards = ref([]);
     const pendingToggles = ref(new Map());
@@ -289,6 +310,43 @@
     const isExportDisabled = computed(() => {
         return !selectedDeviceRow.value?.id || !exportStartDate.value || !exportEndDate.value || !exportFilename.value;
     });
+
+    // Device form inputs based on device.model.js
+    const deviceFormInputs = ref([
+        { field: 'hostname', title: 'Hostname', type: 'text', required: true, maxLength: 50 },
+        { field: 'ip', title: 'IP Address', type: 'text', maxLength: 30 },
+        { field: 'sysName', title: 'System Name', type: 'text', maxLength: 200 },
+        { field: 'ne_id', title: 'NE ID', type: 'text', maxLength: 45 },
+        { field: 'codesite', title: 'Code Site', type: 'text', maxLength: 45 },
+        { field: 'snmp_disable', title: 'SNMP Disabled', type: 'checkbox', checkboxLabel: 'Disable SNMP monitoring' },
+        { field: 'community', title: 'SNMP Community', type: 'text', helpText: 'SNMP v1/v2c community string' },
+        { field: 'snmpver', title: 'SNMP Version', type: 'select', options: [
+            { label: 'v1', value: 'v1' },
+            { label: 'v2c', value: 'v2c' },
+            { label: 'v3', value: 'v3' }
+        ]},
+        { field: 'authlevel', title: 'Auth Level (v3)', type: 'select', options: [
+            { label: 'noAuthNoPriv', value: 'noAuthNoPriv' },
+            { label: 'authNoPriv', value: 'authNoPriv' },
+            { label: 'authPriv', value: 'authPriv' }
+        ]},
+        { field: 'authname', title: 'Auth Name (v3)', type: 'text' },
+        { field: 'authpass', title: 'Auth Password (v3)', type: 'password' },
+        { field: 'authalgo', title: 'Auth Algorithm (v3)', type: 'select', options: [
+            { label: 'MD5', value: 'MD5' },
+            { label: 'SHA', value: 'SHA' },
+            { label: 'SHA512', value: 'SHA512' }
+        ]},
+        { field: 'cryptopass', title: 'Crypto Password (v3)', type: 'password' },
+        { field: 'cryptoalgo', title: 'Crypto Algorithm (v3)', type: 'select', options: [
+            { label: 'AES', value: 'AES' }
+        ]}
+    ]);
+
+    const deviceFormButtons = ref([
+        { label: 'Cancel', type: 'button', class: 'btn-default', action: 'cancel' },
+        { label: 'Update Device', type: 'submit', class: 'btn-primary', icon: 'glyphicon glyphicon-ok', action: 'submit' }
+    ]);
 
     const eventColumns = ref([
       { headerName: 'Status', field: 'status', minWidth: 80 },
@@ -348,10 +406,12 @@
     const menuItems = ref([
         {
             id: 'edit',
-            label: 'Edit',
+            label: 'Update',
             icon: 'glyphicon glyphicon-pencil',
             action: (row) => {
                 console.log('[Action] Edit row:', row);
+                editDeviceData.value = { ...row };
+                showEditDeviceModal.value = true;
             }
         },
         {
@@ -693,6 +753,31 @@
         eventsPage.value = page;
         eventsTargetPage.value = page;
         // Le watcher se chargera de recharger les données
+    }
+
+    async function handleUpdateDevice(formData) {
+        if (!editDeviceData.value?.id) {
+            console.error('[UpdateDevice] No device ID found');
+            return;
+        }
+        try {
+            loading.value = true;
+            await updateDevice(editDeviceData.value.id, formData);
+            showEditDeviceModal.value = false;
+            editDeviceData.value = null;
+            await loadDevices();
+            console.log('[UpdateDevice] Device updated successfully');
+        } catch (error) {
+            console.error('[UpdateDevice] Failed:', error?.message || error);
+            alert(`Failed to update device: ${error?.message || 'Unknown error'}`);
+        } finally {
+            loading.value = false;
+        }
+    }
+
+    function handleCancelEdit() {
+        showEditDeviceModal.value = false;
+        editDeviceData.value = null;
     }
 
     async function loadTypeDevices() {

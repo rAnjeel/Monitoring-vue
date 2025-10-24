@@ -48,6 +48,22 @@ export function createDevice(device) {
   return api.post('/devices', device)
 }
 
+export async function updateDevice(id, device) {
+  try {
+    if (!id) throw new Error('Device ID is required')
+    const response = await api.put(`/devices/${id}`, device)
+    console.log('[UpdateDevice] Success:', response.data)
+    return response.data
+  } catch (error) {
+    const jsonErrorMessage = error && error.response && error.response.data
+      ? (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data))
+      : null
+    const message = jsonErrorMessage || error.message || 'Unknown error'
+    console.error('[UpdateDevice] Error:', message)
+    throw new Error(`Failed to update device: ${message}`)
+  }
+}
+
 export async function getPortsDevice(id) {
   try {
     if (id == null) throw new Error('id is required')
