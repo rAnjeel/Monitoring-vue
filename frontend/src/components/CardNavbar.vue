@@ -6,7 +6,15 @@
           <i class="glyphicon glyphicon-chevron-left"></i>
         </button>
 
-        <div class="cards-wrapper" :style="{ transform: `translateX(-${currentIndex * cardWidth}px)` }" ref="cardsWrapper">
+        <div
+          class="cards-wrapper"
+          :style="{
+            transform: `translateX(-${currentIndex * cardWidth}px)`,
+            '--card-basis': `calc(${cardWidthPercent}% - 12px)`,
+            '--card-min-width': `${cardMinWidth}px`
+          }"
+          ref="cardsWrapper"
+        >
           <div
             v-for="(item, index) in itemsResolved"
             :key="getItemKey(item, index)"
@@ -58,6 +66,16 @@
     cardStyle: {
       type: Object,
       default: () => ({})
+    },
+    // New: control card width
+    cardWidthPercent: {
+      type: Number,
+      default: 15,
+      validator: (v) => v > 0 && v <= 100
+    },
+    cardMinWidth: {
+      type: Number,
+      default: 120
     }
   });
 

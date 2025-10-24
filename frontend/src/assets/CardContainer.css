@@ -26,8 +26,8 @@ body {
 
 /* Individual card styling */
 .device-card {
-    flex: 0 0 calc(15% - 12px); /* 5 cards visible (20% each) minus gap */
-    min-width: 120px;
+    flex: 0 0 var(--card-basis, calc(15% - 12px)); /* Overridable via CSS variable */
+    min-width: var(--card-min-width, 120px);
     background: linear-gradient(135deg, #3498db, #2980b9);
     border-radius: 4px;
     padding: 10px 5px;

@@ -12,6 +12,8 @@
     <CardNavbar
         :items="customDevices"
         :initial-visible-cards="4"
+        :card-width-percent="12"
+        :card-min-width="100"
         @device-selected="handleDeviceSelect"
         @navigation-changed="handleNavigationChange"
         ref="deviceNav"
