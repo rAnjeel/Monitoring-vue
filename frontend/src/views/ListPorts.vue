@@ -93,15 +93,22 @@
       <h4 class="events-section-title">Historic Port Events</h4>
 
       <eChartComponent
+        :key="'traffic-' + trafficZoomEnabled"
         :x="eventsChartX"
         :y="chartSeries"
-        title="Traffic"
+        :title="trafficChartTitle"
         x-label="Time"
         y-label="Octets"
         height="300px"
         :smooth=false
-        :x-label-interval="1"
-        :y-interval="30"
+        :x-label-interval="0"
+        :y-axis-min="trafficAxisBounds.min"
+        :y-axis-max="trafficAxisBounds.max"
+        :enable-zoom="true"
+        :data-zoom="[
+          { type: 'inside', xAxisIndex: 0, filterMode: 'weakFilter' },
+          { type: 'slider', xAxisIndex: 0, height: 18, bottom: 8 }
+        ]"
       />
 
         <div class="events-toolbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px;">
@@ -134,6 +141,14 @@
             <input type="number" min="1" v-model.number="eventsTargetPage" @keyup.enter="jumpToEventsPage" class="form-control input-sm" />
           </div>
           <div style="margin-left:auto;display:flex;gap:8px;">
+            <button 
+              @click="toggleTrafficZoom" 
+              class="btn btn-sm" 
+              :class="trafficZoomEnabled ? 'btn-primary' : 'btn-default'"
+            >
+              <span class="glyphicon" :class="trafficZoomEnabled ? 'glyphicon-zoom-out' : 'glyphicon-zoom-in'"></span>
+              {{ trafficZoomEnabled ? 'Reset Zoom' : 'Zoom to Fit' }}
+            </button>
             <button @click="loadDeviceEvents" class="btn btn-primary btn-sm" :disabled="loading">
               <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
               Reload
@@ -156,6 +171,24 @@
         <button :disabled="!eventsHasNextPage" @click="changeEventsPage(eventsPage + 1)">Next</button>
       </div>
     </ModalComponent>
+
+    <!-- EDIT PORT MODAL -->
+    <ModalComponent
+        v-model="showEditPortModal"
+        :title="`Update Port - ${editPortData?.ifName || editPortData?.name || ''}`"
+        :width="'min(800px, 96vw)'"
+        :maxHeight="'80vh'"
+    >
+        <FormComponent
+            v-if="editPortData"
+            :form-title="'Port Information'"
+            :inputs="portFormInputs"
+            :buttons="portFormButtons"
+            :initial-data="editPortData"
+            @submit="handleUpdatePort"
+            @cancel="handleCancelEdit"
+        />
+    </ModalComponent>
   </div>
 </template>
 
@@ -165,7 +198,7 @@
     import '@/assets/Loading.css';
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
-    import { getLimitedPorts, connectSocket, disconnectSocket, onSocket, offSocket } from '@/services/ports/ports';
+    import { getLimitedPorts, updatePort, connectSocket, disconnectSocket, onSocket, offSocket } from '@/services/ports/ports';
     import { badgeContainer, superposeValue, formatDate } from '@/services/utils/utils';
     import AgGridContextMenu from '@/components/AgGridContextMenu.vue';
     import MenuModule from '@/modules/AgGridModule';
@@ -173,6 +206,7 @@
     import DetailsComponent from '@/components/DetailsComponent.vue';
     import { getPortEventsByPortId } from '@/services/ports/portEvents';
     import eChartComponent from '@/components/eChartComponent.vue';
+    import FormComponent from '@/components/FormComponent.vue';
 
 
     const loading = ref(false);
@@ -189,7 +223,9 @@
     const totalCountDisplay = ref(0);
     const showImportPorts = ref(false);
     const showEventsModal = ref(false);
+    const showEditPortModal = ref(false);
     const selectedPortRow = ref(null);
+    const editPortData = ref(null);
     const eventsRows = ref([]);
     const eventsPage = ref(1);
     const eventsPageSize = ref(20);
@@ -200,6 +236,7 @@
     const eventsTargetPage = ref(1);
     const onlyMonitored = ref(false);
     const hostnameFilter = ref('');
+    const trafficZoomEnabled = ref(true);
     const hasActiveFilters = computed(() => {
       const gf = gridFilterModel.value;
       return !!(gf && typeof gf === 'object' && Object.keys(gf).length > 0);
@@ -212,6 +249,41 @@
       { headerName: 'Date', field: 'event_time', minWidth: 180 },
     ]);
 
+    // Port form inputs based on port.model.js
+    const portFormInputs = ref([
+      { field: 'ifName', title: 'Interface Name', type: 'text' },
+      { field: 'ifDescr', title: 'Description', type: 'textarea', rows: 2 },
+      { field: 'ifAlias', title: 'Alias', type: 'textarea', rows: 2 },
+      { field: 'isMonitored', title: 'Monitored', type: 'checkbox', checkboxLabel: 'Enable monitoring for this port' },
+      { field: 'ifIndex', title: 'Interface Index', type: 'number', disabled: true, helpText: 'Read-only field' },
+      { field: 'ifType', title: 'Interface Type', type: 'text', maxLength: 45 },
+      { field: 'ifMtu', title: 'MTU', type: 'number', helpText: 'Maximum Transmission Unit' },
+      { field: 'ifSpeed', title: 'Speed', type: 'number', helpText: 'Interface speed in bits per second' },
+      { field: 'ifHighSpeed', title: 'High Speed', type: 'number', helpText: 'Speed in Mbps for high-speed interfaces' },
+      { field: 'ifPhysAddress', title: 'Physical Address', type: 'text', maxLength: 45, helpText: 'MAC address' },
+      { field: 'ifAdminStatus', title: 'Admin Status', type: 'select', options: [
+        { label: 'Up', value: 'up' },
+        { label: 'Down', value: 'down' },
+        { label: 'Testing', value: 'testing' }
+      ]},
+      { field: 'ifOperStatus', title: 'Operational Status', type: 'select', options: [
+        { label: 'Up', value: 'up' },
+        { label: 'Down', value: 'down' },
+        { label: 'Testing', value: 'testing' },
+        { label: 'Unknown', value: 'unknown' },
+        { label: 'Dormant', value: 'dormant' },
+        { label: 'Not Present', value: 'notPresent' },
+        { label: 'Lower Layer Down', value: 'lowerLayerDown' }
+      ]},
+      { field: 'ifPromiscuousMode', title: 'Promiscuous Mode', type: 'checkbox', checkboxLabel: 'Enable promiscuous mode' },
+      { field: 'ifConnectorPresent', title: 'Connector Present', type: 'checkbox', checkboxLabel: 'Physical connector is present' }
+    ]);
+
+    const portFormButtons = ref([
+      { label: 'Cancel', type: 'button', class: 'btn-default', action: 'cancel' },
+      { label: 'Update Port', type: 'submit', class: 'btn-primary', icon: 'glyphicon glyphicon-ok', action: 'submit' }
+    ]);
+
     // Données pour le graphique des événements (x: event_time, y: ifInOctets/ifOutOctets)
     const sortedEvents = computed(() =>
       (eventsRows.value || []).slice().sort((a, b) => new Date(a.event_time) - new Date(b.event_time))
@@ -222,12 +294,99 @@
     );
 
     const chartSeries = computed(() => {
+      const inData = sortedEvents.value.map(r => Number(r?.ifInOctets ?? 0));
+      const outData = sortedEvents.value.map(r => Number(r?.ifOutOctets ?? 0));
       return [
-        { name: 'InOctets', data: sortedEvents.value.map(r => Number(r?.ifInOctets ?? 0)) },
-        { name: 'OutOctets', data: sortedEvents.value.map(r => Number(r?.ifOutOctets ?? 0)) }
+        { name: 'InOctets', data: inData },
+        { name: 'OutOctets', data: outData }
       ]
     });
+
+    // Helper function to calculate Y-axis bounds with margin
+    function calculateAxisBounds(dataArray, marginPercent = 10) {
+      if (!dataArray || dataArray.length === 0) return { min: null, max: null };
+      
+      const validValues = dataArray.filter(v => v != null && !isNaN(v) && isFinite(v));
+      if (validValues.length === 0) return { min: null, max: null };
+      
+      const min = Math.min(...validValues);
+      const max = Math.max(...validValues);
+      
+      // If all values are the same, add fixed margin
+      if (min === max) {
+        const margin = Math.max(Math.abs(min) * 0.1, 1);
+        return {
+          min: Math.floor(min - margin),
+          max: Math.ceil(max + margin)
+        };
+      }
+      
+      const range = max - min;
+      const margin = range * (marginPercent / 100);
+      
+      return {
+        min: Math.floor(min - margin),
+        max: Math.ceil(max + margin)
+      };
+    }
+
+    // Computed property for Y-axis bounds
+    const trafficAxisBounds = computed(() => {
+      if (!trafficZoomEnabled.value) return { min: null, max: null };
+      // Collect all data points from InOctets and OutOctets
+      const allValues = [
+        ...chartSeries.value[0].data,
+        ...chartSeries.value[1].data
+      ];
+      return calculateAxisBounds(allValues, 10);
+    });
+
+    // Computed title with Y-axis range information
+    const trafficChartTitle = computed(() => {
+      if (!trafficZoomEnabled.value) return 'Traffic';
+      if (trafficAxisBounds.value.min === null || trafficAxisBounds.value.max === null) return 'Traffic';
+      return `Traffic (Zoom: ${trafficAxisBounds.value.min}-${trafficAxisBounds.value.max} Octets)`;
+    });
+
+    function toggleTrafficZoom() {
+      trafficZoomEnabled.value = !trafficZoomEnabled.value;
+    }
+
+    // Map grid data to form fields (handle different field naming)
+    function mapPortDataToForm(row) {
+      if (!row) return null;
+      
+      return {
+        // Keep all original fields
+        ...row,
+        // Ensure form field names are properly set
+        ifName: row.ifName ?? row.name ?? '',
+        ifDescr: row.ifDescr ?? row.description ?? '',
+        ifAlias: row.ifAlias ?? row.alias ?? '',
+        ifAdminStatus: row.ifAdminStatus ?? row.adminStatus ?? '',
+        ifOperStatus: row.ifOperStatus ?? row.operStatus ?? '',
+        ifSpeed: row.ifSpeed ?? row.Speed ?? row.speed ?? 0,
+        ifHighSpeed: row.ifHighSpeed ?? row.HighSpeed ?? 0,
+        ifMtu: row.ifMtu ?? row.mtu ?? 0,
+        ifType: row.ifType ?? row.type ?? '',
+        ifPhysAddress: row.ifPhysAddress ?? row.physAddress ?? '',
+        ifPromiscuousMode: row.ifPromiscuousMode ?? row.PromiscuousMode ?? false,
+        ifConnectorPresent: row.ifConnectorPresent ?? row.ConnectorPresent ?? false,
+        ifIndex: row.ifIndex ?? row.index ?? 0,
+        isMonitored: row.isMonitored ?? false,
+      };
+    }
+
     const menuItems = ref([
+        {
+            id: 'update',
+            label: 'Update',
+            icon: 'glyphicon glyphicon-pencil',
+            action: (row) => {
+                editPortData.value = mapPortDataToForm(row);
+                showEditPortModal.value = true;
+            }
+        },
         {
             id: 'details',
             label: 'Details',
@@ -481,6 +640,31 @@
       if (page < 1) page = 1;
       eventsPage.value = page;
       eventsTargetPage.value = page;
+    }
+
+    async function handleUpdatePort(formData) {
+      if (!editPortData.value.id) {
+        console.error('[UpdatePort] No port ID found');
+        return;
+      }
+      try {
+        loading.value = true;
+        await updatePort(editPortData.value.id, formData);
+        showEditPortModal.value = false;
+        editPortData.value = null;
+        await loadPorts();
+        console.log('[UpdatePort] Port updated successfully');
+      } catch (error) {
+        console.error('[UpdatePort] Failed:', error?.message || error);
+        alert(`Failed to update port: ${error?.message || 'Unknown error'}`);
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    function handleCancelEdit() {
+      showEditPortModal.value = false;
+      editPortData.value = null;
     }
 
     function jumpToPage() {

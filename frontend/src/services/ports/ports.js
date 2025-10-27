@@ -70,6 +70,22 @@ export function createPort(port) {
   return api.post('/ports', port)
 }
 
+export async function updatePort(id, port) {
+  try {
+    if (!id) throw new Error('Port ID is required')
+    const response = await api.put(`/ports/${id}`, port)
+    console.log('[UpdatePort] Success:', response.data)
+    return response.data
+  } catch (error) {
+    const jsonErrorMessage = error && error.response && error.response.data
+      ? (error.response.data.message || error.response.data.error || JSON.stringify(error.response.data))
+      : null
+    const message = jsonErrorMessage || error.message || 'Unknown error'
+    console.error('[UpdatePort] Error:', message)
+    throw new Error(`Failed to update port: ${message}`)
+  }
+}
+
 export async function switchPortMonitored(portId, isMonitored) {
   try {
     if (portId == null) throw new Error('portId is required')
