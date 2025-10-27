@@ -100,7 +100,7 @@
 
             <div class="action-buttons-row">
               <button @click="loadLatency" class="btn btn-info btn-sm" :disabled="loadingLatency">
-                <span class="glyphicon glyphicon-signal" :class="{ 'spinning': loadingLatency }"></span>
+                <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loadingLatency }"></span>
                 Load Latency
               </button>
               <button @click="exportLatencyCsv" class="btn btn-success btn-sm" :disabled="(latencyData || []).length === 0">
