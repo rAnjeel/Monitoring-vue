@@ -23,6 +23,39 @@ class ReportingService {
     }
   }
 
+  // Get global inventory summary (total devices, monitored ports, types)
+  async getInventorySummary() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/reporting/inventory-summary`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching inventory summary:', error);
+      throw error;
+    }
+  }
+
+  // Get devices distribution by type
+  async getDevicesByType() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/reporting/devices-by-type`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching devices by type:', error);
+      throw error;
+    }
+  }
+
+  // Get devices distribution by location
+  async getDevicesByLocation() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/reporting/devices-by-location`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching devices by location:', error);
+      throw error;
+    }
+  }
+
   // Get today summary (total events / down events) for dashboard
   async getTodaySummary(type_device = null) {
     try {

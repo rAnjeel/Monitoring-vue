@@ -3,7 +3,7 @@
     <nav class="top-menu">
       <button class="tab" :class="{ active: activeView === 'dashboard' }" @click="activeView = 'dashboard'">
         <span class="glyphicon glyphicon-dashboard" aria-hidden="true" style="margin-right:6px;"></span>
-        Dashboard
+        Overview
       </button>
       <button class="tab" :class="{ active: activeView === 'devices' }" @click="activeView = 'devices'">
         <span class="glyphicon glyphicon-hdd" aria-hidden="true" style="margin-right:6px;"></span>
@@ -87,7 +87,7 @@
       v-model="isSupervisionOpen"
       title="Supervision Control"
       :width="'420px'"
-      :maxHeight="'60vh'"
+      :maxHeight="'50vh'"
     >
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div style="display:flex;gap:12px;flex-wrap:wrap;">

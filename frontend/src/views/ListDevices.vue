@@ -115,7 +115,7 @@
         <!-- Cards grid (modular) -->
         <CardModalComponent
             title="All ports"
-            :data="portsCards"
+            :data="filteredPortsCards"
             toggle-label="Monitoring"
             @toggle="onToggleItem"
             @action="onActionItem"
@@ -124,6 +124,16 @@
             <button v-if="pendingCount > 0" type="button" class="btn btn-success btn-xs" @click="validatePortToggles">
               <span class="glyphicon glyphicon-ok"></span>
               Validate
+            </button>
+            <button
+              type="button"
+              class="btn btn-xs"
+              :class="showOnlyMonitoredPorts ? 'btn-success' : 'btn-default'"
+              style="margin-left: 8px; display: inline-flex; align-items: center; gap: 4px;"
+              @click="showOnlyMonitoredPorts = !showOnlyMonitoredPorts"
+            >
+              <span class="glyphicon" :class="showOnlyMonitoredPorts ? 'glyphicon-eye-open' : 'glyphicon-eye-close'"></span>
+              Monitored only
             </button>
           </template>
         </CardModalComponent>
@@ -331,8 +341,14 @@
     const editDeviceData = ref(null);
     const eventsRows = ref([]);
     const portsCards = ref([]);
+    const showOnlyMonitoredPorts = ref(false);
     const pendingToggles = ref(new Map());
     const pendingCount = computed(() => pendingToggles.value.size);
+    const filteredPortsCards = computed(() => {
+        const list = portsCards.value || [];
+        if (!showOnlyMonitoredPorts.value) return list;
+        return list.filter(p => !!p.enabled);
+    });
     const selectedMetric = ref('latency');
     const pingLossThreshold = ref(80);
     const eventsPage = ref(1);
