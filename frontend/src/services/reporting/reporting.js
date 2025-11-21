@@ -23,6 +23,19 @@ class ReportingService {
     }
   }
 
+  // Get today summary (total events / down events) for dashboard
+  async getTodaySummary(type_device = null) {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/reporting/today-summary`, {
+        params: { type_device }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching today summary:', error);
+      throw error;
+    }
+  }
+
   // Get top 10 unstable devices
   async getTop10UnstableDevices(type_device = null) {
     try {
@@ -39,7 +52,7 @@ class ReportingService {
   // Get average latency by day and site
   async getAverageLatencyByDayAndSite(params = {}) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/reporting/latency-by-day-site`, {
+      const response = await axios.get(`${API_BASE_URL}/reporting/latency-by-day`, {
         params: {
           start_date: params.start_date,
           end_date: params.end_date,
@@ -85,10 +98,10 @@ class ReportingService {
     const flat = y.filter(n => Number.isFinite(n));
     const summary = flat.length
       ? {
-          average: Math.round((flat.reduce((s, v) => s + v, 0) / flat.length) * 100) / 100,
-          maximum: Math.max(...flat),
-          minimum: Math.min(...flat),
-        }
+        average: Math.round((flat.reduce((s, v) => s + v, 0) / flat.length) * 100) / 100,
+        maximum: Math.max(...flat),
+        minimum: Math.min(...flat),
+      }
       : null;
 
     // Retour final (prêt pour le graphique)

@@ -135,6 +135,14 @@ export function badgeContainer(value) {
       container.style.backgroundColor = '#e8f4ff'
       container.style.color = '#1074e7'
       break
+    case 'running':
+      container.style.backgroundColor = '#e8f4ff'
+      container.style.color = '#2bd244ff'
+      break
+    case 'stopped':
+      container.style.backgroundColor = '#e8f4ff'
+      container.style.color = '#e74c3c'
+      break
     case 'DOWN':
       container.style.backgroundColor = '#fdecea'
       container.style.color = '#e74c3c'
