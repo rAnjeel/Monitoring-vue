@@ -140,7 +140,6 @@ export default { name: 'ReportingView' };
   import { getTypeDevices } from '@/services/type devices/typeDevices';   
   import AgGridModule from '@/components/AgGridModule.vue';
   import reportingService from '@/services/reporting/reporting.js';
-  import { formatDate } from '@/services/utils/utils';
   import { badgeContainer } from '@/services/utils/utils';
   import { exportJsonToCsv } from '@/services/csv/exportCSV';
   import { exportJsonToExcel } from '@/services/excel/exportExcel';
@@ -166,15 +165,14 @@ export default { name: 'ReportingView' };
   const stabilityColumns = ref([
     { headerName: 'HOSTNAME', field: 'hostname', filter: 'agTextColumnFilter' },
     { headerName: 'SYSNAME', field: 'sysName', filter: 'agTextColumnFilter' },
-    { headerName: 'TYPE ID', field: 'type_device_id', filter: 'agNumberColumnFilter' },
+    { headerName: 'DEVICE TYPE', field: 'type_device_name', filter: 'agTextColumnFilter' },
     { headerName: 'TOTAL EVENTS', field: 'total_events', filter: 'agNumberColumnFilter' },
     { headerName: 'NB DOWN', field: 'nb_down', filter: 'agNumberColumnFilter' },
-    { headerName: 'FAILURE RATE (%)', field: 'taux_panne', filter: 'agNumberColumnFilter' },
+    { headerName: 'FLAPPING INDEX (%)', field: 'taux_panne', filter: 'agNumberColumnFilter' },
     { headerName: 'STATUS', field: 'etat_stabilite', filter: 'agTextColumnFilter', cellRenderer: (params) => badgeContainer(params.value) },
   ]);
 
   const latencyColumns = ref([
-    { headerName: 'DAY', field: 'jour', filter: 'agTextColumnFilter', valueFormatter: params => formatDate(params.value, 'FR', 'dd/MM/yyyy') },
     { headerName: 'HOSTNAME', field: 'hostname', filter: 'agTextColumnFilter' },
     { headerName: 'AVG (ms)', field: 'avg_latency_ms', filter: 'agNumberColumnFilter' },
     { headerName: 'MIN (ms)', field: 'min_latency_ms', filter: 'agNumberColumnFilter' },
