@@ -1,11 +1,12 @@
 <template>
   <div class="form-component">
     <form @submit.prevent="handleSubmit">
-      <div v-for="(input, index) in inputs" :key="index" class="form-group">
-        <label :for="`input-${index}`" class="control-label">
-          {{ input.title }}
-          <span v-if="input.required" class="text-danger">*</span>
-        </label>
+      <div class="form-grid">
+        <div v-for="(input, index) in inputs" :key="index" class="form-group" :class="getFieldClass(input)">
+          <label :for="`input-${index}`" class="control-label">
+            {{ input.title }}
+            <span v-if="input.required" class="text-danger">*</span>
+          </label>
         
         <!-- Text Input -->
         <input
@@ -91,6 +92,7 @@
         <small v-if="input.helpText" class="help-block text-muted">
           {{ input.helpText }}
         </small>
+        </div>
       </div>
       
       <!-- Buttons -->
@@ -185,33 +187,68 @@ function handleButtonClick(button) {
     emit('button-click', { action: button.action, data: { ...formData.value } });
   }
 }
+
+function getFieldClass(input) {
+  // Déterminer la largeur du champ selon le type
+  if (input.type === 'checkbox') return 'field-full';
+  if (input.type === 'textarea') return 'field-full';
+  if (input.type === 'password') return 'field-medium';
+  if (input.field === 'hostname' || input.field === 'ip') return 'field-medium';
+  return 'field-medium'; // Par défaut
+}
 </script>
 
 <style scoped>
 .form-component {
-  padding: 12px 0;
+  padding: 8px 0;
+  max-width: 900px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 16px;
 }
 
 .form-group {
-  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.field-full {
+  grid-column: 1 / -1;
+}
+
+.field-medium {
+  grid-column: span 1;
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .field-medium {
+    grid-column: 1 / -1;
+  }
 }
 
 .control-label {
   display: block;
   margin-bottom: 4px;
   font-weight: 500;
-  font-size: 13px;
+  font-size: 12px;
   color: #475569;
 }
 
 .form-control {
   width: 100%;
+  font-size: 13px;
 }
 
 .help-block {
   display: block;
-  margin-top: 4px;
-  font-size: 12px;
+  margin-top: 3px;
+  font-size: 11px;
 }
 
 .checkbox label {
@@ -219,5 +256,11 @@ function handleButtonClick(button) {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-size: 13px;
+}
+
+.form-buttons {
+  grid-column: 1 / -1;
+  margin-top: 8px;
 }
 </style>

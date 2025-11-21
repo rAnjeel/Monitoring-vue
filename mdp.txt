@@ -18,3 +18,4 @@ Axe Y : jitter (jitter_ms) = max_latency_ms − min_latency_ms. et dans l'autre 
 Axe X : jour
 
 Axe Y : disponibilité en pourcentage (availability_percent)
+

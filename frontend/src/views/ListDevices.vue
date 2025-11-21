@@ -32,8 +32,8 @@
         <div class="filter-section">
             <div class="row" style="align-items:center;">
                 
-                <!-- Bloc gauche -->
-                <div class="col-md-6">
+                <!-- Filtres sur une ligne -->
+                <div class="col-md-10">
                 <label class="form-label">Show</label>
                 <select v-model.number="pageSize" class="form-control input-sm" style="display:inline-block;width:80px;margin:0 5px;">
                     <option :value="10">10</option>
@@ -46,23 +46,40 @@
                         @keyup.enter="jumpToPage" 
                         class="form-control input-sm" 
                         style="display:inline-block;width:80px;margin-right: 6px;" />
-                <span class="form-label">/ {{ totalPagesDisplay }}</span>
+                <span class="form-label" style="margin-right:6px;">/ {{ totalPagesDisplay }} |</span>
+                <label class="form-label" style="margin-right:6px;">Status</label>
+                <select v-model="statusFilter" @change="onStatusFilterChanged" class="form-control input-sm" style="display:inline-block;width:100px;margin-right: 6px;">
+                    <option value="">All</option>
+                    <option value="up">UP</option>
+                    <option value="down">DOWN</option>
+                </select>
+                <span style="margin-right:6px;">|</span>
+                <label class="form-label" style="margin-right:6px;">Location</label>
+                <input type="text" v-model="locationFilter" @input="onLocationFilterChanged" 
+                       placeholder="Filter by location" 
+                       class="form-control input-sm" 
+                       style="display:inline-block;width:150px;margin-right: 6px;" />
+                <span style="margin-right:8px;">|</span>
+                <label class="form-label" style="margin-right:6px;">Hostname</label>
+                <input type="text" v-model="hostnameFilter" @input="onHostnameFilterChanged" 
+                       placeholder="Filter by hostname" 
+                       class="form-control input-sm" 
+                       style="display:inline-block;width:150px;margin-right: 6px;" />
                 </div>
-                
-                <!-- Bloc droite -->
-                <div class="col-md-6 text-right">
-                <div class="btn-group" role="group" style="gap:8px;">
-                    <button @click="showImportDevices = true" class="btn btn-sm btn-primary" style="margin-right: 8px;">
+                <div class="col-md-2">
+                <button @click="showAddDeviceModal = true" class="btn btn-sm btn-success" style="margin-right: 8px;">
+                    <span class="glyphicon glyphicon-plus"></span>
+                    Add
+                </button>
+                <button @click="showImportDevices = true" class="btn btn-sm btn-primary" style="margin-right: 8px;">
                     <span class="glyphicon glyphicon-upload"></span>
                     Import CSV
-                    </button>
-                    <button @click="reloadGrid" class="btn btn-sm btn-info" :disabled="loading">
+                </button>
+                <button @click="reloadGrid" class="btn btn-sm btn-light" :disabled="loading">
                     <span class="glyphicon glyphicon-refresh" :class="{ 'spinning': loading }"></span>
-                    Reload
-                    </button>
-                </div>
-                </div>
 
+                </button>
+                </div>
             </div>
         </div>
 
@@ -227,6 +244,22 @@
       </div>
     </ModalComponent>
 
+    <!-- ADD DEVICE MODAL -->
+    <ModalComponent
+        v-model="showAddDeviceModal"
+        :title="'Add New Device'"
+        :width="'min(800px, 96vw)'"
+        :maxHeight="'80vh'"
+    >
+        <FormComponent
+            :form-title="'Device Information'"
+            :inputs="deviceFormInputs"
+            :buttons="addDeviceFormButtons"
+            @submit="handleCreateDevice"
+            @cancel="handleCancelAdd"
+        />
+    </ModalComponent>
+
     <!-- EDIT DEVICE MODAL -->
     <ModalComponent
         v-model="showEditDeviceModal"
@@ -257,7 +290,7 @@
     import AgGridModule from '@/components/AgGridModule.vue';
     import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
     import { connect as connectSocket, disconnect as disconnectSocket, on as onSocket, off as offSocket } from '@/services/devices/deviceSocket';
-    import { getLimitedDevices, getPortsDevice, exportDeviceReportingCsv, updateDevice } from '@/services/devices/devices';   
+    import { getLimitedDevices, getPortsDevice, exportDeviceReportingCsv, updateDevice, createDevice } from '@/services/devices/devices';   
     import { switchPortMonitored } from '@/services/ports/ports';
     import { getTypeDevicesCounts } from '@/services/type devices/typeDevices';   
     import { formatDate, formatDateMinuteSecond, stringifyStatusValue, badgeContainer, superposeValue} from '@/services/utils/utils';
@@ -266,6 +299,7 @@
     import ModalComponent from '@/components/ModalComponent.vue';
     import eChartComponent from '@/components/eChartComponent.vue';
     import { getDeviceEventsByDeviceId } from '@/services/devices/deviceEvents';
+    import { getSettingByKey } from '@/services/settings/monitoringSettings';
     import DetailsComponent from '@/components/DetailsComponent.vue';
     import CardModalComponent from '@/components/CardModalComponent.vue';
     import FormComponent from '@/components/FormComponent.vue';
@@ -287,7 +321,11 @@
     const totalPagesDisplay = ref(1);
     const totalCountDisplay = ref(0);
     const showImportDevices = ref(false);
+    const statusFilter = ref('');
+    const locationFilter = ref('');
+    const hostnameFilter = ref('');
     const showEventsModal = ref(false);
+    const showAddDeviceModal = ref(false);
     const showEditDeviceModal = ref(false);
     const selectedDeviceRow = ref(null);
     const editDeviceData = ref(null);
@@ -296,6 +334,7 @@
     const pendingToggles = ref(new Map());
     const pendingCount = computed(() => pendingToggles.value.size);
     const selectedMetric = ref('latency');
+    const pingLossThreshold = ref(80);
     const eventsPage = ref(1);
     const eventsPageSize = ref(20);
     const eventsStartDate = ref('');
@@ -348,6 +387,11 @@
         { label: 'Update Device', type: 'submit', class: 'btn-primary', icon: 'glyphicon glyphicon-ok', action: 'submit' }
     ]);
 
+    const addDeviceFormButtons = ref([
+        { label: 'Cancel', type: 'button', class: 'btn-default', action: 'cancel' },
+        { label: 'Create Device', type: 'submit', class: 'btn-success', icon: 'glyphicon glyphicon-plus', action: 'submit' }
+    ]);
+
     const eventColumns = ref([
       { headerName: 'Status', field: 'status', minWidth: 80 },
       { headerName: 'Loss %', field: 'loss', minWidth: 80, valueFormatter: params => params.value ?? 0 },
@@ -373,7 +417,7 @@
 
 
     const chartSeries = computed(() => {
-        const threshold = Number( process.env.VUE_PING_LOSS_THRESHOLD || 10)
+        const threshold = Number(pingLossThreshold.value ?? 80)
         const length = sortedEvents.value.length
         const thresholdLine = Array.from({ length }, () => threshold)
         if (selectedMetric.value === 'loss') {
@@ -388,6 +432,20 @@
             { name: 'MAX',  data: sortedEvents.value.map(r => Number(r?.max ?? 0)) },
         ]
     });
+
+    async function loadPingLossThreshold() {
+        try {
+            const setting = await getSettingByKey('PING_LOSS_THRESHOLD')
+            const val = Number(setting?.value)
+            if (Number.isFinite(val)) pingLossThreshold.value = val
+        } catch (e) {
+            // keep default 80
+        }
+    }
+
+    onMounted(() => {
+        loadPingLossThreshold()
+    })
 
 
     const detailsColumns = ['device_id', 'hostname', 'sysName', 'snmp_disable', 'community', 'authlevel', 'authname', 'authalgo', 'snmpver'];
@@ -755,6 +813,22 @@
         // Le watcher se chargera de recharger les données
     }
 
+    async function handleCreateDevice(formData) {
+        try {
+            loading.value = true;
+            await createDevice(formData);
+            showAddDeviceModal.value = false;
+            await loadDevices();
+            await loadTypeDevices();
+            console.log('[CreateDevice] Device created successfully');
+        } catch (error) {
+            console.error('[CreateDevice] Failed:', error?.message || error);
+            alert(`Failed to create device: ${error?.message || 'Unknown error'}`);
+        } finally {
+            loading.value = false;
+        }
+    }
+
     async function handleUpdateDevice(formData) {
         if (!editDeviceData.value?.id) {
             console.error('[UpdateDevice] No device ID found');
@@ -773,6 +847,10 @@
         } finally {
             loading.value = false;
         }
+    }
+
+    function handleCancelAdd() {
+        showAddDeviceModal.value = false;
     }
 
     function handleCancelEdit() {
@@ -909,8 +987,24 @@
             }
         }
 
-        const finalFilter = { ...deviceFilterBackend, ...filterFromGrid };
-        console.log('[ApplyFilters] Application des filtres (device + grille):', finalFilter);
+        let finalFilter = { ...deviceFilterBackend, ...filterFromGrid };
+        
+        // Ajouter le filtre de statut si sélectionné
+        if (statusFilter.value) {
+            finalFilter.ping_status = statusFilter.value;
+        }
+        
+        // Ajouter le filtre de location si renseigné
+        if (locationFilter.value && locationFilter.value.trim()) {
+            finalFilter.location = locationFilter.value.trim();
+        }
+        
+        // Ajouter le filtre de hostname si renseigné
+        if (hostnameFilter.value && hostnameFilter.value.trim()) {
+            finalFilter.hostname = hostnameFilter.value.trim();
+        }
+        
+        console.log('[ApplyFilters] Application des filtres (device + grille + status + location + hostname):', finalFilter);
         gridFilterModel.value = finalFilter;
         await loadDevices();
     }
@@ -923,11 +1017,32 @@
             return;
         }
         
+        statusFilter.value = '';
+        locationFilter.value = '';
+        hostnameFilter.value = '';
         gridFilterModel.value = null;
         if (agGridRef.value) {
             agGridRef.value.setFilterModel(null);
         }
         await loadDevices();
+    }
+
+    async function onStatusFilterChanged() {
+        console.log('[StatusFilter] Changement de statut:', statusFilter.value);
+        targetPage.value = 1;
+        await applyFilters();
+    }
+
+    async function onLocationFilterChanged() {
+        console.log('[LocationFilter] Changement de lieu:', locationFilter.value);
+        targetPage.value = 1;
+        await applyFilters();
+    }
+
+    async function onHostnameFilterChanged() {
+        console.log('[HostnameFilter] Changement de hostname:', hostnameFilter.value);
+        targetPage.value = 1;
+        await applyFilters();
     }
 
     async function reloadGrid() {

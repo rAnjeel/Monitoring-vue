@@ -44,7 +44,7 @@ export async function getDevice(id) {
   return api.get(`/devices/${id}`)
 }
 
-export function createDevice(device) {
+export async function createDevice(device) {
   return api.post('/devices', device)
 }
 
