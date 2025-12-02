@@ -243,12 +243,12 @@ export default { name: 'ReportingView' };
         type_device: selectedDeviceType.value || undefined,
         group_by: 'site',
       };
-      const data = await reportingService.getAverageLatencyByDayAndSite(params);
+      const data = await reportingService.getAverageLatencySite(params);
       console.log('data latency', data);
       latencyData.value = Array.isArray(data?.rows) ? data.rows : (Array.isArray(data) ? data : []);
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.error('[Reporting] getAverageLatencyByDayAndSite failed:', e?.message || e);
+      console.error('[Reporting] getAverageLatencySite failed:', e?.message || e);
       error.value = 'Failed to load latency data';
       latencyData.value = [];
     } finally {

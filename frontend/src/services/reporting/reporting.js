@@ -101,6 +101,24 @@ class ReportingService {
     }
   }
 
+  async getAverageLatencySite(params = {}) {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/reporting/latency-by-day-site`, {
+        params: {
+          start_date: params.start_date,
+          end_date: params.end_date,
+          type_device: params.type_device,
+          device_id: params.device_id,
+          group_by: params.group_by,
+        }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching average latency by day and site:', error);
+      throw error;
+    }
+  }
+
   // Build chart-ready latency data (x: days, y: average latency, yMin: min latency, yMax: max latency)
   async getLatencyChartData(params = {}) {
     // Récupère directement les lignes agrégées par jour depuis SQL

@@ -246,7 +246,7 @@
       { headerName: 'Status', field: 'status', minWidth: 80 },
       { headerName: 'InOctets', field: 'ifInOctets', minWidth: 100 },
       { headerName: 'OutOctets', field: 'ifOutOctets', minWidth: 100 },
-      { headerName: 'Date', field: 'event_time', minWidth: 180 },
+      { headerName: 'Date', field: 'event_time',valueFormatter: params => formatDate(params.value, 'YYYY-MM-DD HH:mm:ss'), minWidth: 180 },
     ]);
 
     // Port form inputs based on port.model.js
